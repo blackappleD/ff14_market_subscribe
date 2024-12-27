@@ -13,6 +13,7 @@ import com.ff14.market.util.AuthUtil;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -89,5 +90,8 @@ public class FF14UserService {
 		ff14UserRepo.save(user);
 	}
 
+	public List<FF14UserPO> findAllUser() {
+		return ff14UserRepo.findAll();
+	}
 
 }

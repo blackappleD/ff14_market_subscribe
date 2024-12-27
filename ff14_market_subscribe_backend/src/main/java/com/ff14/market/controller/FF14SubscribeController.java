@@ -31,4 +31,5 @@ public class FF14SubscribeController {
 	public void modify(@RequestBody @Valid List<UserSubscribeReqDTO> dto) {
 		ff14UserSubscribeService.modify(dto);
 	}
+
 }

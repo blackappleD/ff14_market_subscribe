@@ -64,6 +64,9 @@ public class FF14UserSubscribeService {
 
 	}
 
+	public List<FF14UserSubPO> findByUser(FF14UserPO user) {
+		return ff14UserSubscribeRepo.findByUser(user);
+	}
 
 	public List<FF14UserSubPO> findAll() {
 		return ff14UserSubscribeRepo.findAll();
