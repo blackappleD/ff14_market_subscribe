@@ -21,7 +21,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
 	@Override
 	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
-	                       @Nullable ModelAndView modelAndView) throws Exception {
+			@Nullable ModelAndView modelAndView) throws Exception {
 		try {
 			HandlerInterceptor.super.postHandle(request, response, handler, modelAndView);
 		} finally {
