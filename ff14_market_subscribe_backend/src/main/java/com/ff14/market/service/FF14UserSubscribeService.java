@@ -13,7 +13,10 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author chentong
@@ -46,17 +49,27 @@ public class FF14UserSubscribeService {
 	}
 
 	public void modify(List<UserSubscribeReqDTO> req) {
+
+		FF14UserPO currentUser = AdminUtil.getCurrentUser();
+		List<FF14UserSubPO> byUser = ff14UserSubscribeRepo.findByUser(currentUser);
+		Map<FF14WorldPO, FF14UserSubPO> subMap = byUser.stream()
+				.collect(Collectors.toMap(FF14UserSubPO::getWorld, Function.identity()));
+
+		List<Long> reqWorldIds = req.stream().map(dto -> dto.getWorld().getId()).toList();
+
+		List<FF14UserSubPO> removeWorldSubs = byUser.stream()
+				.filter(sub -> !reqWorldIds.contains(sub.getWorld().getId()))
+				.toList();
+		ff14UserSubscribeRepo.deleteAll(removeWorldSubs);
 		req.forEach(dto -> {
-			FF14UserPO user = ff14UserService.findById(AuthUtil.getLoginId());
 			FF14WorldPO world = ff14WorldService.findById(dto.getWorld().getId());
 			FF14UserSubPO po;
-			Optional<FF14UserSubPO> byUserAndWorld = ff14UserSubscribeRepo.findByUserAndWorld(user, world);
-			if (byUserAndWorld.isPresent()) {
-				po = byUserAndWorld.get();
+			if (subMap.containsKey(world)) {
+				po = subMap.get(world);
 				ff14UserSubscribeMapper.reqDto2po(dto, po);
 			} else {
 				po = ff14UserSubscribeMapper.reqDto2po(dto);
-				po.setUser(AdminUtil.getCurrentUser());
+				po.setUser(currentUser);
 			}
 			ff14UserSubscribeRepo.save(po);
 
