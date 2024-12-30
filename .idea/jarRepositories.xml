@@ -17,6 +17,11 @@
       <option name="url" value="file:/$PROJECT_DIR$/../../.m2/gradle" />
     </remote-repository>
     <remote-repository>
+      <option name="id" value="maven" />
+      <option name="name" value="maven" />
+      <option name="url" value="file:/$PROJECT_DIR$/../../.m2/gradle" />
+    </remote-repository>
+    <remote-repository>
       <option name="id" value="MavenRepo" />
       <option name="name" value="MavenRepo" />
       <option name="url" value="https://repo.maven.apache.org/maven2/" />
@@ -35,11 +40,6 @@
       <option name="id" value="Alibaba" />
       <option name="name" value="Alibaba" />
       <option name="url" value="https://maven.aliyun.com/repository/public" />
-    </remote-repository>
-    <remote-repository>
-      <option name="id" value="maven" />
-      <option name="name" value="maven" />
-      <option name="url" value="file:/D:/.m2/gradle" />
     </remote-repository>
   </component>
 </project>

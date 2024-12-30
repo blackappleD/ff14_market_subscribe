@@ -3,8 +3,9 @@ import store from '@/store';
 import router from '@/router';
 
 const instance = axios.create({
-    baseURL: process.env.VUE_APP_API_URL || '',
+    baseURL: process.env.VUE_APP_API_URL,
     timeout: 10000,
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json'
     }
@@ -21,6 +22,10 @@ instance.interceptors.request.use(
             } catch (error) {
                 console.error('设置请求头失败:', error);
             }
+        }
+        // 确保 API 请求路径正确
+        if (config.url && !config.url.startsWith('http')) {
+            config.url = `${process.env.VUE_APP_API_URL}${config.url}`;
         }
         return config;
     },

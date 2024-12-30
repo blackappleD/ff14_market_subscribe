@@ -30,5 +30,9 @@ module.exports = defineConfig({
           isCustomElement: tag => tag.startsWith('vue-')
         }
       }));
-  }
+  },
+  publicPath: process.env.NODE_ENV === 'production' ? '/ff14_market/' : '/',
+  outputDir: 'dist',
+  assetsDir: 'static',
+  productionSourceMap: false
 });
