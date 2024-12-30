@@ -1,10 +1,12 @@
 package com.ff14.market.controller;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import com.ff14.market.dto.ItemDTO;
 import com.ff14.market.service.FF14ItemService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -16,6 +18,9 @@ public class FF14ItemController {
 
     @GetMapping("/search")
     public List<ItemDTO> searchItems(@RequestParam String name) {
+        if (CharSequenceUtil.isBlank(name)){
+            return new ArrayList<>();
+        }
         return ff14ItemService.searchItems(name);
     }
 }
