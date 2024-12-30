@@ -4,3 +4,5 @@
 /ff14_market_subscribe_backend/build/classes/java/main/
 */bin/
 *.log
+/.idea/vcs.xml
+/ff14_market_subscribe_backend/.idea/
