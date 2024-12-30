@@ -7,7 +7,7 @@ plugins {
 }
 
 ext {
-    projectName = 'sukebei-rss'
+    projectName = 'ff14_market'
     springBootVersion = '3.3.4'
     fromImage = 'http://127.0.0.1:5000/openjdk:21'
     repository = '127.0.0.1:5000'
