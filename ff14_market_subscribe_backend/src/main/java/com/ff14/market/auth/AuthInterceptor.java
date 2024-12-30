@@ -12,11 +12,18 @@ public class AuthInterceptor implements HandlerInterceptor {
 	@Override
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
 		AuthUtil.clearThreadCache();
-		if (handler instanceof HandlerMethod) {
-			AuthUtil.setRequest(request);
+
+		if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+			response.setStatus(HttpServletResponse.SC_OK);
 			return true;
 		}
-		return false;
+
+		if (!(handler instanceof HandlerMethod)) {
+			return false;
+		}
+
+		AuthUtil.setRequest(request);
+		return true;
 	}
 
 	@Override
@@ -25,7 +32,6 @@ public class AuthInterceptor implements HandlerInterceptor {
 		try {
 			HandlerInterceptor.super.postHandle(request, response, handler, modelAndView);
 		} finally {
-			// 每次请求完成后，清理token
 			AuthUtil.clearThreadCache();
 		}
 	}
