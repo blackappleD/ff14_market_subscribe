@@ -5,5 +5,5 @@
 */bin/
 *.log
 /ff14_market_subscribe_backend/.idea/
-dist
-node_modules
+/ff14_market_subscribe_frontend/node_modules/
+/ff14_market_subscribe_frontend/dist/

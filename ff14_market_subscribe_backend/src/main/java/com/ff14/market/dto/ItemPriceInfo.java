@@ -43,6 +43,8 @@ public class ItemPriceInfo {
 
 	@Schema(description = "总价")
 	private long total;
+
+	@Schema(description = "手续费")
 	private int tax;
 
 	@Schema(description = "是否低于阈值")

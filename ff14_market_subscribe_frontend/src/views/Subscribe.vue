@@ -1,5 +1,6 @@
 <template>
     <div class="subscribe-container">
+        <Toast :visible="toast.show" :message="toast.message" :type="toast.type" />
         <div class="nav-bar">
             <router-link to="/" class="nav-item">首页</router-link>
             <router-link to="/subscribe" class="nav-item active">物品订阅</router-link>
@@ -8,8 +9,8 @@
         <div class="content">
             <div class="title-section">
                 <h2 class="page-title">物品订阅</h2>
-                <p class="description">订阅物品会每隔半小时进行推送通知，目前支持的推送方式：邮件</p>
-                <p class="description">满足价格阈值条件的物品，会在实时物价和物价推送中被标记为红色</p>
+                <p class="description"> *订阅物品会每隔半小时进行推送通知，目前支持的推送方式：邮件</p>
+                <p class="description"> *满足价格阈值条件的物品，会在实时物价和物价推送中被标记为红色</p>
             </div>
             <div class="subscription-form">
                 <!-- 区服组列表 -->
@@ -68,14 +69,20 @@
                         <button class="delete-button" @click="deleteItem(groupIndex, itemIndex + 1)">×</button>
                     </div>
                     <button class="add-item-button" @click="addItem(groupIndex)">
-                        <span class="plus-icon">+</span>
+                        <el-icon class="el-icon">
+                            <Plus />
+                        </el-icon>
+                        <span class="button-text">添加物品</span>
                     </button>
                 </div>
 
                 <!-- 添加区服组按钮 -->
                 <div class="server-add-row">
                     <button class="add-world-button" @click="addServerGroup">
-                        <span class="plus-icon">+</span>
+                        <el-icon class="el-icon">
+                            <Plus />
+                        </el-icon>
+                        <span class="button-text">添加区服</span>
                     </button>
                 </div>
 
@@ -91,6 +98,8 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue';
 import axios from '@/utils/axios';
+import Toast from '@/components/Toast.vue';
+import { Plus } from '@element-plus/icons-vue';
 
 // 修改 debounce 函数的类型定义
 function debounce<T extends (...args: any[]) => any>(
@@ -165,6 +174,10 @@ interface UserSubscribeReqDTO {
 
 export default defineComponent({
     name: 'Subscribe',
+    components: {
+        Toast,
+        Plus
+    },
     setup() {
         const subscriptionGroups = ref<ServerGroup[]>([{
             worldSearch: '',
@@ -177,6 +190,21 @@ export default defineComponent({
                 searchResults: []
             }]
         }]);
+
+        const toast = ref({
+            show: false,
+            message: '',
+            type: 'success'
+        });
+
+        const showToast = (message: string, type = 'success') => {
+            toast.value.message = message;
+            toast.value.type = type;
+            toast.value.show = true;
+            setTimeout(() => {
+                toast.value.show = false;
+            }, 3000);
+        };
 
         // 修改区服搜索逻辑，分为初始加载和搜索两个函数
         const loadAllWorlds = async (groupIndex: number) => {
@@ -377,13 +405,13 @@ export default defineComponent({
 
                 // 调用保存接口
                 await axios.post('/ff14/subscribe', subscribeData);
-                alert('保存成功');
+                showToast('保存成功');
 
                 // 重新获取最新数据
                 await fetchSubscriptions();
             } catch (error: any) {
                 console.error('保存订阅失败:', error);
-                alert(error.response?.data?.message || '保存失败，请重试');
+                showToast(error.response?.data?.message || '保存失败，请重试', 'error');
             }
         };
 
@@ -405,6 +433,7 @@ export default defineComponent({
             addItem,
             deleteItem,
             fetchSubscriptions,
+            toast,
             handleSubmit
         };
     }
@@ -448,23 +477,24 @@ export default defineComponent({
 }
 
 .content {
-    padding: 40px;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 .title-section {
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
 
 .page-title {
     font-size: 24px;
     color: #333;
-    margin-bottom: 8px;
-    font-weight: normal;
-    text-align: left;
+    margin: 0;
 }
 
+
 .description {
-    font-size: 14px;
+    font-size: 11px;
     color: #666;
     margin: 0;
 }
@@ -484,7 +514,6 @@ export default defineComponent({
     display: flex;
     gap: 17px;
     margin-bottom: 10px;
-    padding: 0 40px;
     align-items: flex-start;
 }
 
@@ -542,22 +571,54 @@ export default defineComponent({
     background-color: #f5f5f5;
 }
 
+.add-world-button {
+    background: none;
+    border: 1px solid #4285f4;
+    width: 196px;
+    height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    gap: 8px;
+    color: #4285f4;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
 
-.plus-icon {
-    width: 20px;
-    height: 20px;
-    background-color: #4285f4;
-    color: white;
-    border-radius: 50%;
+.add-item-button {
+    background: none;
+    border: 1px solid #4285f4;
+    width: 196px;
+    height: 30px;
+    margin-left: 217px;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
-    line-height: 1;
+    margin-top: 10px;
+    gap: 8px;
+    color: #4285f4;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: background-color 0.3s;
 }
 
-.add-server {
-    margin: 20px 0 0 40px;
+.add-world-button:hover,
+.add-item-button:hover {
+    background-color: #f0f7ff;
+    border-color: #3367d6;
+    color: #3367d6;
+}
+
+.el-icon {
+    font-size: 16px;
+
+}
+
+.button-text {
+    font-size: 14px;
 }
 
 .empty-field {
@@ -574,26 +635,6 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
-}
-
-.add-world-button {
-    background: none;
-    border: none;
-    padding: 0 40px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.add-item-button {
-    background: none;
-    border: none;
-    padding: 0 260px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .delete-button {
