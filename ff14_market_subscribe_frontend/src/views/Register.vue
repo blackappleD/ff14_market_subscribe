@@ -3,6 +3,7 @@
         <div class="nav-bar">
             <router-link to="/" class="nav-item">首页</router-link>
             <router-link to="/subscribe" class="nav-item">物品订阅</router-link>
+            <router-link to="/realtime" class="nav-item">实时物价</router-link>
         </div>
         <div class="content">
             <div class="register-box">
@@ -18,7 +19,15 @@
                         <input type="email" v-model="user.email" class="input-field" placeholder="请输入邮箱" required>
                     </div>
                     <div class="form-group">
-                        <input type="password" v-model="user.password" class="input-field" placeholder="请输入密码" required>
+                        <input type="password" v-model="user.password" class="input-field" placeholder="请输入密码" required
+                            minlength="6" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" v-model="confirmPassword" class="input-field" placeholder="请确认密码"
+                            required minlength="6" maxlength="20">
+                    </div>
+                    <div v-if="passwordError" class="error-message">
+                        {{ passwordError }}
                     </div>
                     <div class="form-group">
                         <button type="submit" class="register-btn">注册</button>
@@ -33,7 +42,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from '@/utils/axios';
 
@@ -47,8 +56,24 @@ export default defineComponent({
             email: '',
             password: ''
         });
+        const confirmPassword = ref('');
+        const passwordError = computed(() => {
+            if (!confirmPassword.value) return '';
+            if (user.value.password.length < 6) {
+                return '密码长度不能小于6位';
+            }
+            if (user.value.password !== confirmPassword.value) {
+                return '两次输入的密码不一致';
+            }
+            return '';
+        });
 
         const handleRegister = async () => {
+            if (passwordError.value) {
+                alert(passwordError.value);
+                return;
+            }
+
             try {
                 await axios.post('/ff14/user/register', user.value);
                 alert('注册成功！');
@@ -61,6 +86,8 @@ export default defineComponent({
 
         return {
             user,
+            confirmPassword,
+            passwordError,
             handleRegister
         };
     }
@@ -165,5 +192,14 @@ export default defineComponent({
 
 .login-link:hover {
     text-decoration: underline;
+}
+
+.error-message {
+    color: #ff4444;
+    font-size: 12px;
+    margin-top: -10px;
+    margin-bottom: 10px;
+    text-align: left;
+    padding: 0 2px;
 }
 </style>

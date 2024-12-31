@@ -3,8 +3,23 @@ const path = require('path');
 
 module.exports = defineConfig({
   transpileDependencies: true,
+  publicPath: process.env.NODE_ENV === 'production' ? '/ff14_market/' : '/',
+  outputDir: 'dist',
+  assetsDir: 'static',
+  productionSourceMap: false,
+  chainWebpack: config => {
+    config.plugin('html').tap(args => {
+      args[0].title = '最终幻想14实时物价订阅';
+      return args;
+    });
+  },
   devServer: {
     port: 3000,
+    historyApiFallback: {
+      rewrites: [
+        { from: /./, to: '/index.html' }
+      ]
+    },
     proxy: {
       '/ff14': {
         target: 'http://localhost:18888',
@@ -12,27 +27,5 @@ module.exports = defineConfig({
         ws: true
       }
     }
-  },
-  configureWebpack: {
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, 'src')
-      }
-    }
-  },
-  chainWebpack: config => {
-    config.module
-      .rule('vue')
-      .use('vue-loader')
-      .tap(options => ({
-        ...options,
-        compilerOptions: {
-          isCustomElement: tag => tag.startsWith('vue-')
-        }
-      }));
-  },
-  publicPath: process.env.NODE_ENV === 'production' ? '/ff14_market/' : '/',
-  outputDir: 'dist',
-  assetsDir: 'static',
-  productionSourceMap: false
+  }
 });

@@ -1,6 +1,10 @@
 <template>
   <div id="app">
-    <router-view />
+    <router-view v-slot="{ Component }">
+      <keep-alive>
+        <component :is="Component" />
+      </keep-alive>
+    </router-view>
   </div>
 </template>
 
@@ -8,7 +12,12 @@
 import { defineComponent } from 'vue';
 
 export default defineComponent({
-  name: 'App'
+  name: 'App',
+  errorCaptured(err, vm, info) {
+    console.error('Error captured in App.vue:', err)
+    console.error('Error info:', info)
+    return false // 阻止错误继续传播
+  }
 });
 </script>
 

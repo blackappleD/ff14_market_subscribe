@@ -3,9 +3,14 @@
         <div class="nav-bar">
             <router-link to="/" class="nav-item">首页</router-link>
             <router-link to="/subscribe" class="nav-item active">物品订阅</router-link>
+            <router-link to="/realtime" class="nav-item">实时物价</router-link>
         </div>
         <div class="content">
-            <h2 class="page-title">物品订阅</h2>
+            <div class="title-section">
+                <h2 class="page-title">物品订阅</h2>
+                <p class="description">订阅物品会每隔半小时进行推送通知，目前支持的推送方式：邮件</p>
+                <p class="description">满足价格阈值条件的物品，会在实时物价和物价推送中被标记为红色</p>
+            </div>
             <div class="subscription-form">
                 <!-- 区服组列表 -->
                 <div v-for="(group, groupIndex) in subscriptionGroups" :key="groupIndex" class="group">
@@ -87,7 +92,7 @@
 import { defineComponent, ref, onMounted } from 'vue';
 import axios from '@/utils/axios';
 
-// 修改 debounce ��数的类型定义
+// 修改 debounce 函数的类型定义
 function debounce<T extends (...args: any[]) => any>(
     fn: T,
     delay: number
@@ -409,7 +414,7 @@ export default defineComponent({
 <style scoped>
 .subscribe-container {
     min-height: 100vh;
-    background-color: #f5f5f5;
+    background-color: #ffffff;
 }
 
 .nav-bar {
@@ -446,12 +451,22 @@ export default defineComponent({
     padding: 40px;
 }
 
+.title-section {
+    margin-bottom: 30px;
+}
+
 .page-title {
     font-size: 24px;
     color: #333;
-    margin-bottom: 30px;
+    margin-bottom: 8px;
     font-weight: normal;
     text-align: left;
+}
+
+.description {
+    font-size: 14px;
+    color: #666;
+    margin: 0;
 }
 
 .subscription-form {

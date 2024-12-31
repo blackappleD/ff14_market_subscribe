@@ -3,6 +3,7 @@
         <div class="nav-bar">
             <router-link to="/" class="nav-item active">首页</router-link>
             <router-link to="/subscribe" class="nav-item">物品订阅</router-link>
+            <router-link to="/realtime" class="nav-item">实时物价</router-link>
         </div>
         <div class="content">
             <template v-if="!isLoggedIn">
