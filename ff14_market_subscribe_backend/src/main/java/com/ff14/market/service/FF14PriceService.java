@@ -47,6 +47,7 @@ public class FF14PriceService {
 					.map(itemSup -> {
 						ItemPriceInfo itemPriceInfo = requestItemPriceInfo(itemSup.getItem().getId(),
 								itemSup.getItem().getName(), userSubscribe.getWorld().getName());
+						itemPriceInfo.setTotal(itemPriceInfo.getTotal() + itemPriceInfo.getTax());
 						if (itemSup.getNotifyThreshold() == null) {
 							itemPriceInfo.setLowerThreshold(false);
 						} else {
