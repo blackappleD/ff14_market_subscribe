@@ -7,7 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.ff14.market.dto.ItemPriceInfo;
 import com.ff14.market.dto.ItemPriceInfoGroupByWorld;
 import com.ff14.market.po.FF14UserPO;
-import com.ff14.market.po.FF14UserSubPO;
+import com.ff14.market.po.FF14SubscribeGroupPO;
 import com.ff14.market.task.ScheduleTask;
 import com.ff14.market.util.AdminUtil;
 import jakarta.annotation.Resource;
@@ -30,7 +30,7 @@ public class FF14PriceService {
 
 
 	@Resource
-	private FF14UserSubscribeService ff14UserSubscribeService;
+	private FF14SubscribeGroupService ff14SubscribeGroupService;
 
 	public List<ItemPriceInfoGroupByWorld> subscribeItemPriceOnTime() {
 		return subscribeItemPrice(AdminUtil.getCurrentUser());
@@ -38,7 +38,7 @@ public class FF14PriceService {
 	}
 
 	public List<ItemPriceInfoGroupByWorld> subscribeItemPrice(FF14UserPO user) {
-		List<FF14UserSubPO> userSubscribeList = ff14UserSubscribeService.findByUser(user);
+		List<FF14SubscribeGroupPO> userSubscribeList = ff14SubscribeGroupService.findByUser(user);
 
 		return userSubscribeList.stream().map(userSubscribe -> {
 			ItemPriceInfoGroupByWorld data = new ItemPriceInfoGroupByWorld();

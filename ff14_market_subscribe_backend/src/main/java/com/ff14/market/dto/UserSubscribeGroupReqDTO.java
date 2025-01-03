@@ -12,7 +12,7 @@ import java.util.List;
  * @date 2024/12/19 12:00
  */
 @Data
-public class UserSubscribeReqDTO {
+public class UserSubscribeGroupReqDTO {
 
 	private Long id;
 

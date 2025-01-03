@@ -76,13 +76,13 @@
                     </button>
                 </div>
 
-                <!-- 添加区服组按钮 -->
+                <!-- 添加分组组按钮 -->
                 <div class="server-add-row">
                     <button class="add-world-button" @click="addServerGroup">
                         <el-icon class="el-icon">
                             <Plus />
                         </el-icon>
-                        <span class="button-text">添加区服</span>
+                        <span class="button-text">添加分组</span>
                     </button>
                 </div>
 
@@ -134,11 +134,13 @@ interface ItemSubResDTO {
 }
 
 interface UserSubscribeResDTO {
+    id: number;
     world: WorldDTO;
     items: ItemSubResDTO[];
 }
 
 interface Item {
+    subId?: number;
     id?: number;
     name?: string;
     nameSearch: string;
@@ -148,6 +150,7 @@ interface Item {
 }
 
 interface ServerGroup {
+    id?: number;
     worldId?: number;
     world?: string;
     worldSearch: string;
@@ -317,8 +320,9 @@ export default defineComponent({
                 const response = await axios.get('/ff14/subscribe');
                 const subscriptions: UserSubscribeResDTO[] = response.data;
 
-                // 转换后端数据格式为前端格式
+                // 转换后端数据格式为前端格式，保留 ID
                 subscriptionGroups.value = subscriptions.map(sub => ({
+                    id: sub.id,
                     worldId: sub.world.id,
                     world: sub.world.name,
                     worldSearch: sub.world.name,
@@ -326,6 +330,7 @@ export default defineComponent({
                     worldResults: [],
                     items: sub.items.map(itemSub => ({
                         id: itemSub.item.id,
+                        subId: itemSub.id,
                         name: itemSub.item.name,
                         nameSearch: itemSub.item.name,
                         threshold: itemSub.notifyThreshold,
@@ -372,6 +377,7 @@ export default defineComponent({
                 const subscribeData: UserSubscribeReqDTO[] = subscriptionGroups.value
                     .filter(group => group.worldId && group.items.length > 0)
                     .map(group => ({
+                        id: group.id,
                         world: {
                             id: group.worldId!
                         },
@@ -379,6 +385,7 @@ export default defineComponent({
                             .filter(item => item.id)
                             .map(item => {
                                 const itemData: ItemSubReqDTO = {
+                                    id: item.subId,
                                     item: {
                                         id: item.id!
                                     }
@@ -403,11 +410,11 @@ export default defineComponent({
                     return;
                 }
 
-                // 调用保存接口
-                await axios.post('/ff14/subscribe', subscribeData);
+                // 调用保存接口并获取返回数据
+                const response = await axios.post('/ff14/subscribe', subscribeData);
                 showToast('保存成功');
 
-                // 重新获取最新数据
+                // 使用返回的数据更新本地状态
                 await fetchSubscriptions();
             } catch (error: any) {
                 console.error('保存订阅失败:', error);

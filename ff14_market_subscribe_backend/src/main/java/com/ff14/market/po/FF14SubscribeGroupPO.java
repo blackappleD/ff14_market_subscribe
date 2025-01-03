@@ -17,14 +17,14 @@ import java.util.List;
 @Getter
 @Setter
 @FieldNameConstants
-@Entity(name = FF14UserSubPO.TABLE_NAME)
+@Entity(name = FF14SubscribeGroupPO.TABLE_NAME)
 @Table(indexes = {
 		@Index(name = "user_world_name_idx", columnList = "wold_id,user_id", unique = true)
 })
-public class FF14UserSubPO {
-	public static final String TABLE_NAME = "ff14_user_subscribe";
+public class FF14SubscribeGroupPO {
+	public static final String TABLE_NAME = "ff14_subscribe_group";
 
-	private static final String USER_SUBSCRIBE_ITEMS = "ff14_user_sub_items";
+	private static final String SUBSCRIBE_GROUP_ITEMS = "ff14_subscribe_group_items";
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -38,7 +38,7 @@ public class FF14UserSubPO {
 	private FF14WorldPO world;
 
 	@OneToMany(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE, CascadeType.PERSIST}, orphanRemoval = true)
-	@JoinTable(name = USER_SUBSCRIBE_ITEMS,
+	@JoinTable(name = SUBSCRIBE_GROUP_ITEMS,
 			joinColumns = @JoinColumn(name = "user_subscribe_id"),
 			inverseJoinColumns = @JoinColumn(name = "item_sub_id"),
 			foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT),

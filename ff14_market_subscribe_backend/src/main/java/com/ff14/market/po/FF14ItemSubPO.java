@@ -17,7 +17,7 @@ import org.hibernate.annotations.Comment;
 @FieldNameConstants
 @Entity(name = FF14ItemSubPO.TABLE_NAME)
 public class FF14ItemSubPO {
-	public static final String TABLE_NAME = "ff14_item_sub";
+	public static final String TABLE_NAME = "ff14_subscribe_item";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
