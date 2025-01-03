@@ -36,7 +36,6 @@ public class ScheduleTask {
 	@Resource
 	private FF14UserService ff14UserService;
 
-	@PostConstruct
 	@Scheduled(cron = "0 0/30 * * * ? ")
 	public void ff14Task() {
 
