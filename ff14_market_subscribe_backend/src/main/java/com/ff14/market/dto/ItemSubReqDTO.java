@@ -17,6 +17,9 @@ public class ItemSubReqDTO {
 	@Schema(description = "物品信息")
 	private LongIdDTO item;
 
+	@Schema(description = "是否只订阅hq")
+	private Boolean hq = false;
+
 	@Schema(description = "价格阈值")
 	private Long notifyThreshold;
 }

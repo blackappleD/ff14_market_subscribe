@@ -1,7 +1,11 @@
 package com.ff14.market.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
@@ -24,6 +28,9 @@ public class SubscribePriceGroup {
 	private List<ItemPriceGroup> itemPriceGroups;
 
 	@Data
+	@Builder
+	@NoArgsConstructor
+	@AllArgsConstructor
 	public static class ItemPriceGroup {
 
 		@Schema(description = "物品id")

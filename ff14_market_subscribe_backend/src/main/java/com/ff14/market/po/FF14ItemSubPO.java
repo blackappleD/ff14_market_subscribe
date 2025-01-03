@@ -1,5 +1,6 @@
 package com.ff14.market.po;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,6 +27,9 @@ public class FF14ItemSubPO {
 	@ManyToOne(optional = false)
 	@JoinColumn(foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
 	private FF14ItemPO item;
+
+	@Comment("是否只订阅hq")
+	private Boolean hq;
 
 	@Comment("通知价格阈值：低于该阈值通知，可以为空，为空则都会通知")
 	private Long notifyThreshold;

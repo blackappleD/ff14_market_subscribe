@@ -1,5 +1,6 @@
 package com.ff14.market.service;
 
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
@@ -16,6 +17,7 @@ import jakarta.annotation.Resource;
 import lombok.Data;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,7 +33,7 @@ public class FF14PriceService {
 
 
 	// 占位符： 大区 itemid
-	private static final String UNIVERSAL_URI = "https://universalis.app/api/v2/{}/{}?listings=5&entries=20&noGst=1";
+	private static final String UNIVERSAL_URI = "https://universalis.app/api/v2/{}/{}?listings=5&entries=20&noGst=1&hq={}";
 
 
 	@Resource
@@ -55,22 +57,51 @@ public class FF14PriceService {
 	}
 
 	public List<SubscribePriceGroup.ItemPriceGroup> requestItemPriceInfo(List<FF14ItemSubPO> itemSubs, String worldName) {
-		if (itemSubs.size() == 1) {
-			FF14ItemPO item = itemSubs.getFirst().getItem();
-			SubscribePriceGroup.ItemPriceGroup itemPriceGroup = new SubscribePriceGroup.ItemPriceGroup();
-			itemPriceGroup.setId(item.getId());
-			itemPriceGroup.setName(item.getName());
-			itemPriceGroup.setItemPriceInfoList(requestItemPriceInfo(item.getId(), worldName));
-			return List.of(itemPriceGroup);
-		}
-		String idString = itemSubs.stream().map(item -> String.valueOf(item.getItem().getId()))
-				.collect(Collectors.joining(","));
+
+		List<SubscribePriceGroup.ItemPriceGroup> list = ListUtil.list(false);
+		List<FF14ItemSubPO> hqItemSubs = itemSubs.stream().filter(FF14ItemSubPO::getHq).toList();
+		List<FF14ItemSubPO> notHqItemSubs = itemSubs.stream().filter(ff14ItemSubPO -> !ff14ItemSubPO.getHq()).toList();
+
 		Map<String, String> itemIdNameMap = itemSubs.stream()
 				.collect(Collectors.toMap(item -> String.valueOf(item.getItem().getId()),
 						item -> item.getItem().getName()));
 
-		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, idString);
-		try (HttpResponse response = HttpUtil.createGet(url)
+		if (hqItemSubs.size() == 1) {
+			list.add(SubscribePriceGroup.ItemPriceGroup.builder()
+					.id(hqItemSubs.getFirst().getItem().getId())
+					.name(hqItemSubs.getFirst().getItem().getName())
+					.itemPriceInfoList(requestItemPriceInfo(hqItemSubs.getFirst(), worldName))
+					.build());
+		} else {
+			String hqItemIdStr = itemSubs.stream()
+					.filter(FF14ItemSubPO::getHq)
+					.map(itemSub -> String.valueOf(itemSub.getItem().getId()))
+					.collect(Collectors.joining(","));
+			String hqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, hqItemIdStr, true);
+			list.addAll(request(itemIdNameMap, hqUrl));
+		}
+		if (notHqItemSubs.size() == 1) {
+			list.add(SubscribePriceGroup.ItemPriceGroup.builder()
+					.id(notHqItemSubs.getFirst().getItem().getId())
+					.name(notHqItemSubs.getFirst().getItem().getName())
+					.itemPriceInfoList(requestItemPriceInfo(notHqItemSubs.getFirst(), worldName))
+					.build());
+		} else {
+			String notHqItemIdStr = itemSubs.stream()
+					.filter(itemSub -> !itemSub.getHq())
+					.map(itemSub -> String.valueOf(itemSub.getItem().getId()))
+					.collect(Collectors.joining(","));
+
+			String nqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, notHqItemIdStr, "");
+			list.addAll(request(itemIdNameMap, nqUrl));
+		}
+		return list;
+
+	}
+
+
+	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, String> itemIdNameMap, String hqUrl) {
+		try (HttpResponse response = HttpUtil.createGet(hqUrl)
 				.execute()) {
 			if (response.getStatus() == 200) {
 
@@ -83,16 +114,14 @@ public class FF14PriceService {
 					itemPriceGroup.setItemPriceInfoList(entry.getValue().getListings());
 					return itemPriceGroup;
 				}).toList();
-			} else {
-				return null;
 			}
+			return new ArrayList<>();
 		}
 	}
 
+	public List<ItemPriceInfo> requestItemPriceInfo(FF14ItemSubPO itemSub, String worldName) {
 
-	public List<ItemPriceInfo> requestItemPriceInfo(Long itemId, String worldName) {
-
-		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemId);
+		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), itemSub.getHq());
 		try (HttpResponse response = HttpUtil.createGet(url)
 				.execute()) {
 			if (response.getStatus() == 200) {

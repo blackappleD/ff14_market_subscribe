@@ -41,8 +41,14 @@
                                         {{ item.name }}
                                     </div>
                                 </div>
-                                <input v-model="group.items[0].threshold" class="input-field threshold" type="number"
-                                    placeholder="价格阈值">
+                                <div class="threshold-wrapper">
+                                    <input v-model="group.items[0].threshold" class="input-field" type="number"
+                                        placeholder="价格阈值">
+                                    <label class="hq-toggle">
+                                        <input type="checkbox" v-model="group.items[0].hq">
+                                        <span class="hq-label">HQ</span>
+                                    </label>
+                                </div>
                                 <button class="delete-button" @click="deleteItem(groupIndex, 0)">×</button>
 
                             </div>
@@ -65,7 +71,13 @@
                                 </div>
                             </div>
                         </div>
-                        <input v-model="item.threshold" class="input-field" type="number" placeholder="价格阈值">
+                        <div class="threshold-wrapper">
+                            <input v-model="item.threshold" class="input-field" type="number" placeholder="价格阈值">
+                            <label class="hq-toggle">
+                                <input type="checkbox" v-model="item.hq">
+                                <span class="hq-label">HQ</span>
+                            </label>
+                        </div>
                         <button class="delete-button" @click="deleteItem(groupIndex, itemIndex + 1)">×</button>
                     </div>
                     <button class="add-item-button" @click="addItem(groupIndex)">
@@ -130,6 +142,7 @@ interface ItemDTO {
 interface ItemSubResDTO {
     id: number;
     item: ItemDTO;
+    hq: boolean;
     notifyThreshold: number;
 }
 
@@ -145,6 +158,7 @@ interface Item {
     name?: string;
     nameSearch: string;
     threshold: number;
+    hq: boolean;
     showDropdown: boolean;
     searchResults: any[];
 }
@@ -165,6 +179,7 @@ interface ItemSubReqDTO {
         id: number;
     };
     notifyThreshold?: number;
+    hq: boolean;
 }
 
 interface UserSubscribeReqDTO {
@@ -189,6 +204,7 @@ export default defineComponent({
             items: [{
                 nameSearch: '',
                 threshold: 0,
+                hq: false,
                 showDropdown: false,
                 searchResults: []
             }]
@@ -288,6 +304,7 @@ export default defineComponent({
                 items: [{
                     nameSearch: '',
                     threshold: 0,
+                    hq: false,
                     showDropdown: false,
                     searchResults: []
                 }]
@@ -298,6 +315,7 @@ export default defineComponent({
             subscriptionGroups.value[groupIndex].items.push({
                 nameSearch: '',
                 threshold: 0,
+                hq: false,
                 showDropdown: false,
                 searchResults: []
             });
@@ -334,6 +352,7 @@ export default defineComponent({
                         name: itemSub.item.name,
                         nameSearch: itemSub.item.name,
                         threshold: itemSub.notifyThreshold,
+                        hq: itemSub.hq,
                         showDropdown: false,
                         searchResults: []
                     }))
@@ -348,6 +367,7 @@ export default defineComponent({
                         items: [{
                             nameSearch: '',
                             threshold: 0,
+                            hq: false,
                             showDropdown: false,
                             searchResults: []
                         }]
@@ -363,6 +383,7 @@ export default defineComponent({
                     items: [{
                         nameSearch: '',
                         threshold: 0,
+                        hq: false,
                         showDropdown: false,
                         searchResults: []
                     }]
@@ -388,12 +409,10 @@ export default defineComponent({
                                     id: item.subId,
                                     item: {
                                         id: item.id!
-                                    }
+                                    },
+                                    hq: item.hq,
+                                    notifyThreshold: item.threshold || undefined
                                 };
-                                // 只有当 threshold 有值且不为 0 时才添加
-                                if (item.threshold) {
-                                    itemData.notifyThreshold = item.threshold;
-                                }
                                 return itemData;
                             })
                     }));
@@ -519,7 +538,7 @@ export default defineComponent({
 
 .input-row {
     display: flex;
-    gap: 17px;
+    gap: 15px;
     margin-bottom: 10px;
     align-items: flex-start;
 }
@@ -679,5 +698,47 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .submit-button:hover {
     background-color: #3367d6;
+}
+
+.threshold-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.threshold-wrapper input {
+    width: 150px;
+    padding-right: 40px;
+    /* 为HQ标签留出空间 */
+}
+
+.hq-toggle {
+    position: absolute;
+    right: 5px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.hq-toggle input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.hq-label {
+    font-size: 12px;
+    color: #999;
+    padding: 2px 4px;
+    border-radius: 2px;
+    transition: all 0.3s;
+}
+
+.hq-toggle input:checked+.hq-label {
+    background-color: #4285f4;
+    color: white;
 }
 </style>

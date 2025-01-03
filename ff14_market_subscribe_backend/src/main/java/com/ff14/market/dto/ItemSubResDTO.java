@@ -15,5 +15,7 @@ public class ItemSubResDTO {
 
 	private ItemDTO item;
 
+	private Boolean hq;
+
 	private Long notifyThreshold;
 }
