@@ -42,6 +42,7 @@
                                     <th>手续费</th>
                                     <th>总价</th>
                                     <th>品质</th>
+                                    <th>雇员名称</th>
                                     <th>生产者</th>
                                 </tr>
                             </thead>
@@ -66,6 +67,7 @@
                                         <td>{{ formatPrice(item.itemPriceInfoList[0].tax) }}</td>
                                         <td>{{ formatPrice(item.itemPriceInfoList[0].total) }}</td>
                                         <td>{{ item.itemPriceInfoList[0].hq ? 'HQ' : 'NQ' }}</td>
+                                        <td>{{ item.itemPriceInfoList[0].retainerName || '-' }}</td>
                                         <td>{{ item.itemPriceInfoList[0].creatorName || '-' }}</td>
                                     </tr>
                                     <!-- 展开的额外价格信息 -->
@@ -82,6 +84,7 @@
                                             <td>{{ formatPrice(price.tax) }}</td>
                                             <td>{{ formatPrice(price.total) }}</td>
                                             <td>{{ price.hq ? 'HQ' : 'NQ' }}</td>
+                                            <td>{{ price.retainerName || '-' }}</td>
                                             <td>{{ price.creatorName || '-' }}</td>
                                         </tr>
                                     </template>
@@ -114,6 +117,7 @@ interface PriceInfo {
     total: number;
     hq: boolean;
     creatorName: string;
+    retainerName: string;
     worldName: string;
     lowerThreshold: boolean;
 }
