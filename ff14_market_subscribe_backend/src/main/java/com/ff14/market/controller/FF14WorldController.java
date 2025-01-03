@@ -18,9 +18,6 @@ public class FF14WorldController {
 
 	@GetMapping("/search")
 	public List<WorldDTO> searchWorlds(@RequestParam String name) {
-		if (CharSequenceUtil.isBlank(name)) {
-			return new ArrayList<>();
-		}
 		return ff14WorldService.searchWorlds(name);
 	}
 }
