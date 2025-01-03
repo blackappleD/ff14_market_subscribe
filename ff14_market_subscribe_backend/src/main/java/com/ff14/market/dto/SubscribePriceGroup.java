@@ -42,6 +42,8 @@ public class SubscribePriceGroup {
 		@Schema(description = "物品价格信息")
 		private List<ItemPriceInfo> itemPriceInfoList;
 
+
+
 	}
 
 }

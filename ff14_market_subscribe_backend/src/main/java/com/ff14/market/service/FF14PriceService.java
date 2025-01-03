@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -62,9 +64,9 @@ public class FF14PriceService {
 		List<FF14ItemSubPO> hqItemSubs = itemSubs.stream().filter(FF14ItemSubPO::getHq).toList();
 		List<FF14ItemSubPO> notHqItemSubs = itemSubs.stream().filter(ff14ItemSubPO -> !ff14ItemSubPO.getHq()).toList();
 
-		Map<String, String> itemIdNameMap = itemSubs.stream()
-				.collect(Collectors.toMap(item -> String.valueOf(item.getItem().getId()),
-						item -> item.getItem().getName()));
+		Map<String, FF14ItemSubPO> itemIdNameMap = itemSubs.stream()
+				.collect(Collectors.toMap(itemSub -> String.valueOf(itemSub.getItem().getId()),
+						Function.identity()));
 
 		if (hqItemSubs.size() == 1) {
 			list.add(SubscribePriceGroup.ItemPriceGroup.builder()
@@ -100,7 +102,7 @@ public class FF14PriceService {
 	}
 
 
-	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, String> itemIdNameMap, String hqUrl) {
+	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, FF14ItemSubPO> itemIdNameMap, String hqUrl) {
 		try (HttpResponse response = HttpUtil.createGet(hqUrl)
 				.execute()) {
 			if (response.getStatus() == 200) {
@@ -110,8 +112,15 @@ public class FF14PriceService {
 				return itemListingsMap.entrySet().stream().map(entry -> {
 					SubscribePriceGroup.ItemPriceGroup itemPriceGroup = new SubscribePriceGroup.ItemPriceGroup();
 					itemPriceGroup.setId(Long.valueOf(entry.getKey()));
-					itemPriceGroup.setName(itemIdNameMap.get(entry.getKey()));
-					itemPriceGroup.setItemPriceInfoList(entry.getValue().getListings());
+					FF14ItemSubPO itemSub = itemIdNameMap.get(entry.getKey());
+					itemPriceGroup.setName(itemSub.getItem().getName());
+					List<ItemPriceInfo> listings = entry.getValue().getListings();
+					listings.forEach(listing -> {
+						if (Objects.nonNull(itemSub.getNotifyThreshold())) {
+							listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
+						}
+					});
+					itemPriceGroup.setItemPriceInfoList(listings);
 					return itemPriceGroup;
 				}).toList();
 			}
@@ -125,11 +134,16 @@ public class FF14PriceService {
 		try (HttpResponse response = HttpUtil.createGet(url)
 				.execute()) {
 			if (response.getStatus() == 200) {
-
 				String body = response.body();
-				return JSONUtil.toBean(body, Listings.class).getListings();
+				List<ItemPriceInfo> listings = JSONUtil.toBean(body, Listings.class).getListings();
+				listings.forEach(listing -> {
+					if (Objects.nonNull(itemSub.getNotifyThreshold())) {
+						listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
+					}
+				});
+				return listings;
 			} else {
-				return null;
+				return new ArrayList<>();
 			}
 		}
 	}
