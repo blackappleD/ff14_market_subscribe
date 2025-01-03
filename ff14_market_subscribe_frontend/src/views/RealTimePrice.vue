@@ -27,11 +27,11 @@
                 数据加载中，请稍后...
             </div>
 
-            <!-- 世界分组展示 -->
+            <!-- 订阅实时价格分组展示 -->
             <template v-else>
                 <div v-if="hasSubscriptions">
-                    <div v-for="worldGroup in priceData" :key="worldGroup.worldName" class="world-group">
-                        <h3 class="world-title">{{ worldGroup.worldName }}</h3>
+                    <div v-for="subscribeGroup in priceData" :key="subscribeGroup.id" class="subscribe-group">
+                        <h3 class="subescribe-world-title">{{ subscribeGroup.worldName }}</h3>
                         <table class="price-table">
                             <thead>
                                 <tr>
@@ -46,18 +46,46 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="item in worldGroup.itemPriceInfoList" :key="item.id">
-                                    <td>{{ item.name }}</td>
-                                    <td>{{ item.worldName }}</td>
-                                    <td :class="{ 'lower-price': item.lowerThreshold }">
-                                        {{ formatPrice(item.pricePerUnit) }}
-                                    </td>
-                                    <td>{{ item.quantity }}</td>
-                                    <td>{{ formatPrice(item.tax) }}</td>
-                                    <td>{{ formatPrice(item.total) }}</td>
-                                    <td>{{ item.hq ? 'HQ' : 'NQ' }}</td>
-                                    <td>{{ item.creatorName || '-' }}</td>
-                                </tr>
+                                <template v-for="item in subscribeGroup.itemPriceGroups" :key="item.id">
+                                    <!-- 主行（默认显示第一条价格信息） -->
+                                    <tr class="main-row">
+                                        <td>
+                                            <div class="item-name-cell">
+                                                <button class="collapse-button"
+                                                    @click="toggleItemPrices(subscribeGroup.id, item.id)">
+                                                    {{ isExpanded(subscribeGroup.id, item.id) ? '▼' : '▶' }}
+                                                </button>
+                                                {{ item.name }}
+                                            </div>
+                                        </td>
+                                        <td>{{ item.itemPriceInfoList[0].worldName }}</td>
+                                        <td :class="{ 'lower-price': item.itemPriceInfoList[0].lowerThreshold }">
+                                            {{ formatPrice(item.itemPriceInfoList[0].pricePerUnit) }}
+                                        </td>
+                                        <td>{{ item.itemPriceInfoList[0].quantity }}</td>
+                                        <td>{{ formatPrice(item.itemPriceInfoList[0].tax) }}</td>
+                                        <td>{{ formatPrice(item.itemPriceInfoList[0].total) }}</td>
+                                        <td>{{ item.itemPriceInfoList[0].hq ? 'HQ' : 'NQ' }}</td>
+                                        <td>{{ item.itemPriceInfoList[0].creatorName || '-' }}</td>
+                                    </tr>
+                                    <!-- 展开的额外价格信息 -->
+                                    <template
+                                        v-if="isExpanded(subscribeGroup.id, item.id) && item.itemPriceInfoList.length > 1">
+                                        <tr v-for="(price, priceIndex) in item.itemPriceInfoList.slice(1)"
+                                            :key="`${item.name}-${priceIndex}`" class="expanded-row">
+                                            <td></td>
+                                            <td>{{ price.worldName }}</td>
+                                            <td :class="{ 'lower-price': price.lowerThreshold }">
+                                                {{ formatPrice(price.pricePerUnit) }}
+                                            </td>
+                                            <td>{{ price.quantity }}</td>
+                                            <td>{{ formatPrice(price.tax) }}</td>
+                                            <td>{{ formatPrice(price.total) }}</td>
+                                            <td>{{ price.hq ? 'HQ' : 'NQ' }}</td>
+                                            <td>{{ price.creatorName || '-' }}</td>
+                                        </tr>
+                                    </template>
+                                </template>
                             </tbody>
                         </table>
                     </div>
@@ -79,21 +107,27 @@ import { defineComponent, ref, onMounted, onUnmounted } from 'vue';
 import axios from '@/utils/axios';
 import { useRouter } from 'vue-router';
 
-interface ItemPriceInfo {
-    id: string;
-    name: string;
+interface PriceInfo {
     pricePerUnit: number;
     quantity: number;
-    creatorName: string;
-    hq: boolean;
-    total: number;
-    lowerThreshold: boolean;
     tax: number;
+    total: number;
+    hq: boolean;
+    creatorName: string;
+    worldName: string;
+    lowerThreshold: boolean;
 }
 
-interface WorldGroup {
+interface ItemPriceGroup {
+    id: number;
+    name: string;
+    itemPriceInfoList: PriceInfo[];
+}
+
+interface subscribePriceGroup {
+    id: number;
     worldName: string;
-    itemPriceInfoList: ItemPriceInfo[];
+    itemPriceGroups: ItemPriceGroup[];
 }
 
 const COOLDOWN_KEY = 'price_refresh_cooldown';
@@ -103,13 +137,14 @@ export default defineComponent({
     name: 'RealTimePrice',
     setup() {
         const router = useRouter();
-        const priceData = ref<WorldGroup[]>([]);
+        const priceData = ref<subscribePriceGroup[]>([]);
         const loading = ref(false);
         const isLoading = ref(true);
         const hasSubscriptions = ref(false);
         const lastUpdateTime = ref<Date | null>(null);
         const cooldownTime = ref(0);
         let cooldownTimer: number | null = null;
+        const expandedItems = ref(new Set<string>());
 
         // 检查是否在冷却时间内
         const checkCooldown = (): boolean => {
@@ -140,7 +175,9 @@ export default defineComponent({
         const checkSubscriptions = async () => {
             try {
                 const response = await axios.get('/ff14/subscribe');
+                console.log('订阅数据:', response.data);
                 hasSubscriptions.value = response.data && response.data.length > 0;
+                console.log('是否有订阅:', hasSubscriptions.value);
                 if (hasSubscriptions.value) {
                     if (!checkCooldown()) {
                         await fetchPriceData();
@@ -148,7 +185,9 @@ export default defineComponent({
                         // 如果在冷却时间内，尝试从缓存加载数据
                         const cachedData = localStorage.getItem('price_data');
                         if (cachedData) {
+                            console.log('缓存数据:', JSON.parse(cachedData));
                             priceData.value = JSON.parse(cachedData);
+                            console.log('当前展示数据:', priceData.value);
                             const savedLastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
                             if (savedLastUpdate) {
                                 lastUpdateTime.value = new Date(parseInt(savedLastUpdate));
@@ -157,6 +196,7 @@ export default defineComponent({
                     }
                 }
             } catch (error: any) {
+                console.error('检查订阅失败:', error);
                 if (error.response?.status === 401) {
                     router.push('/login');
                 } else {
@@ -194,7 +234,13 @@ export default defineComponent({
             try {
                 loading.value = true;
                 const response = await axios.get('/ff14/price/on_time');
-                priceData.value = response.data;
+                console.log('Price data response:', response.data);
+                if (Array.isArray(response.data)) {
+                    priceData.value = response.data;
+                } else {
+                    console.error('Unexpected data format:', response.data);
+                    priceData.value = [];
+                }
                 lastUpdateTime.value = new Date();
 
                 // 缓存数据
@@ -202,10 +248,10 @@ export default defineComponent({
                 updateCooldownStorage();
                 startCooldown();
             } catch (error: any) {
+                console.error('获取价格数据失败:', error);
                 if (error.response?.status === 401) {
                     router.push('/login');
                 } else {
-                    console.error('获取价格数据失败:', error);
                     alert(error.response?.data?.message || '获取数据失败，请重试');
                 }
             } finally {
@@ -231,6 +277,19 @@ export default defineComponent({
             return new Date(date).toLocaleString();
         };
 
+        const toggleItemPrices = (subGroupId: number, itemId: number) => {
+            const key = `${subGroupId}-${itemId}`;
+            if (expandedItems.value.has(key)) {
+                expandedItems.value.delete(key);
+            } else {
+                expandedItems.value.add(key);
+            }
+        };
+
+        const isExpanded = (subGroupId: number, itemId: number) => {
+            return expandedItems.value.has(`${subGroupId}-${itemId}`);
+        };
+
         return {
             priceData,
             loading,
@@ -240,7 +299,9 @@ export default defineComponent({
             cooldownTime,
             fetchPriceData,
             formatPrice,
-            formatTime
+            formatTime,
+            toggleItemPrices,
+            isExpanded,
         };
     }
 });
@@ -290,7 +351,7 @@ export default defineComponent({
     margin: 0;
 }
 
-.world-group {
+.subscribe-group {
     margin-bottom: 30px;
     background: #fff;
     border-radius: 8px;
@@ -298,7 +359,7 @@ export default defineComponent({
     overflow: hidden;
 }
 
-.world-title {
+.subescribe-world-title {
     padding: 15px 20px;
     background: #f5f5f5;
     margin: 0;
@@ -384,5 +445,36 @@ export default defineComponent({
 
 .subscribe-link:hover {
     text-decoration: underline;
+}
+
+.item-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.collapse-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #666;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s;
+}
+
+.collapse-button:hover {
+    color: #4285f4;
+}
+
+.expanded-row {
+    background-color: #f8f9fa;
+}
+
+.expanded-row td:first-child {
+    padding-left: 40px;
 }
 </style>

@@ -5,7 +5,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.extra.mail.MailAccount;
 import cn.hutool.extra.mail.MailUtil;
 import com.ff14.market.dto.ItemPriceInfo;
-import com.ff14.market.dto.ItemPriceInfoGroup;
+import com.ff14.market.dto.SubscribePriceGroup;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,7 +25,7 @@ public class FF14MailService {
 	@Resource
 	private MailAccount mailAccount;
 
-	public void sendPriceSubscriptions(List<ItemPriceInfoGroup> itemPriceInfos, String email) {
+	public void sendPriceSubscriptions(List<SubscribePriceGroup> itemPriceInfos, String email) {
 
 		if (!Validator.isEmail(email)) {
 			log.warn("不合法的邮箱地址：{}", email);
@@ -50,13 +50,14 @@ public class FF14MailService {
 		htmlContent.append("</tr>");
 
 		// 添加数据行
-		for (ItemPriceInfoGroup worldGroup : itemPriceInfos) {
+		for (SubscribePriceGroup worldGroup : itemPriceInfos) {
 
 			String worldName = worldGroup.getWorldName();
-			for (ItemPriceInfo item : worldGroup.getItemPriceInfoList()) {
+			for (SubscribePriceGroup.ItemPriceGroup itemGroup : worldGroup.getItemPriceGroups()) {
+				ItemPriceInfo item = itemGroup.getItemPriceInfoList().getFirst();
 				htmlContent.append("<tr>");
 				htmlContent.append(String.format("<td style='padding: 10px;'>%s</td>", worldName));
-				htmlContent.append(String.format("<td style='padding: 10px;'>%s</td>", item.getName()));
+				htmlContent.append(String.format("<td style='padding: 10px;'>%s</td>", itemGroup.getName()));
 				htmlContent.append(CharSequenceUtil.format("<td style='padding: 10px;{}'>{}</td>", item.isLowerThreshold() ? "color: red;" : "", item.getPricePerUnit()));
 				htmlContent.append(String.format("<td style='padding: 10px;'>%s</td>", item.getWorldName()));
 				htmlContent.append(String.format("<td style='padding: 10px;'>%s</td>", item.isHq() ? "hq" : "nq"));

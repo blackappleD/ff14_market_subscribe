@@ -1,7 +1,7 @@
 package com.ff14.market.mapper;
 
 import com.ff14.market.dto.UserSubscribeGroupReqDTO;
-import com.ff14.market.dto.UserSubscribeResDTO;
+import com.ff14.market.dto.SubscribeGroupResDTO;
 import com.ff14.market.po.FF14SubscribeGroupPO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -16,7 +16,7 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring", uses = {FF14UserMapper.class, FF14ItemMapper.class})
 public interface FF14SubscribeGroupMapper {
 
-	UserSubscribeResDTO po2resDto(FF14SubscribeGroupPO po);
+	SubscribeGroupResDTO po2resDto(FF14SubscribeGroupPO po);
 
 	FF14SubscribeGroupPO reqDto2po(UserSubscribeGroupReqDTO dto);
 

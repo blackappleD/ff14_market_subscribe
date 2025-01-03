@@ -1,11 +1,10 @@
 package com.ff14.market.service;
 
+import com.ff14.market.dto.SubscribeGroupResDTO;
 import com.ff14.market.dto.UserSubscribeGroupReqDTO;
-import com.ff14.market.dto.UserSubscribeResDTO;
 import com.ff14.market.mapper.FF14SubscribeGroupMapper;
 import com.ff14.market.po.FF14SubscribeGroupPO;
 import com.ff14.market.po.FF14UserPO;
-import com.ff14.market.po.FF14WorldPO;
 import com.ff14.market.repo.FF14UserSubscribeRepo;
 import com.ff14.market.util.AdminUtil;
 import com.ff14.market.util.AuthUtil;
@@ -36,7 +35,7 @@ public class FF14SubscribeGroupService {
 	@Resource
 	private FF14SubscribeGroupMapper ff14SubscribeGroupMapper;
 
-	public List<UserSubscribeResDTO> get() {
+	public List<SubscribeGroupResDTO> get() {
 
 		FF14UserPO user = ff14UserService.findById(AuthUtil.getLoginId());
 		List<FF14SubscribeGroupPO> byUser = ff14UserSubscribeRepo.findByUser(user);

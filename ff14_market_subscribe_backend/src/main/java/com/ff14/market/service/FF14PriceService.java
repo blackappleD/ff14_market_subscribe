@@ -6,12 +6,11 @@ import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONUtil;
 import com.ff14.market.dto.ItemDTO;
 import com.ff14.market.dto.ItemPriceInfo;
-import com.ff14.market.dto.ItemPriceInfoGroup;
+import com.ff14.market.dto.SubscribePriceGroup;
 import com.ff14.market.po.FF14ItemPO;
 import com.ff14.market.po.FF14ItemSubPO;
 import com.ff14.market.po.FF14UserPO;
 import com.ff14.market.po.FF14SubscribeGroupPO;
-import com.ff14.market.task.ScheduleTask;
 import com.ff14.market.util.AdminUtil;
 import jakarta.annotation.Resource;
 import lombok.Data;
@@ -32,32 +31,37 @@ public class FF14PriceService {
 
 
 	// 占位符： 大区 itemid
-	private static final String UNIVERSAL_URI = "https://universalis.app/api/v2/{}/{}?listings=1&entries=20&noGst=1";
+	private static final String UNIVERSAL_URI = "https://universalis.app/api/v2/{}/{}?listings=5&entries=20&noGst=1";
 
 
 	@Resource
 	private FF14SubscribeGroupService ff14SubscribeGroupService;
 
-	public List<ItemPriceInfoGroup> subscribeItemPriceOnTime() {
+	public List<SubscribePriceGroup> subscribeItemPriceOnTime() {
 		return subscribeItemPrice(AdminUtil.getCurrentUser());
 
 	}
 
-	public List<ItemPriceInfoGroup> subscribeItemPrice(FF14UserPO user) {
+	public List<SubscribePriceGroup> subscribeItemPrice(FF14UserPO user) {
 		List<FF14SubscribeGroupPO> userSubscribeList = ff14SubscribeGroupService.findByUser(user);
 
 		return userSubscribeList.stream().map(userSubscribe -> {
-			ItemPriceInfoGroup data = new ItemPriceInfoGroup();
+			SubscribePriceGroup data = new SubscribePriceGroup();
+			data.setId(userSubscribe.getId());
 			data.setWorldName(userSubscribe.getWorld().getName());
-			data.setItemPriceInfoList(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName()));
+			data.setItemPriceGroups(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName()));
 			return data;
 		}).toList();
 	}
 
-	public List<ItemPriceInfo> requestItemPriceInfo(List<FF14ItemSubPO> itemSubs, String worldName) {
+	public List<SubscribePriceGroup.ItemPriceGroup> requestItemPriceInfo(List<FF14ItemSubPO> itemSubs, String worldName) {
 		if (itemSubs.size() == 1) {
 			FF14ItemPO item = itemSubs.getFirst().getItem();
-			return List.of(requestItemPriceInfo(item.getId(), item.getName(), worldName));
+			SubscribePriceGroup.ItemPriceGroup itemPriceGroup = new SubscribePriceGroup.ItemPriceGroup();
+			itemPriceGroup.setId(item.getId());
+			itemPriceGroup.setName(item.getName());
+			itemPriceGroup.setItemPriceInfoList(requestItemPriceInfo(item.getId(), worldName));
+			return List.of(itemPriceGroup);
 		}
 		String idString = itemSubs.stream().map(item -> String.valueOf(item.getItem().getId()))
 				.collect(Collectors.joining(","));
@@ -73,14 +77,11 @@ public class FF14PriceService {
 				String body = response.body();
 				Map<String, Listings> itemListingsMap = JSONUtil.toBean(body, BatchItemsPrice.class).getItems();
 				return itemListingsMap.entrySet().stream().map(entry -> {
-					if (!entry.getValue().getListings().isEmpty()) {
-						ItemPriceInfo first = entry.getValue().getListings().getFirst();
-						first.setName(itemIdNameMap.get(entry.getKey()));
-						first.setId(entry.getKey());
-						return first;
-					} else {
-						return null;
-					}
+					SubscribePriceGroup.ItemPriceGroup itemPriceGroup = new SubscribePriceGroup.ItemPriceGroup();
+					itemPriceGroup.setId(Long.valueOf(entry.getKey()));
+					itemPriceGroup.setName(itemIdNameMap.get(entry.getKey()));
+					itemPriceGroup.setItemPriceInfoList(entry.getValue().getListings());
+					return itemPriceGroup;
 				}).toList();
 			} else {
 				return null;
@@ -89,7 +90,7 @@ public class FF14PriceService {
 	}
 
 
-	public ItemPriceInfo requestItemPriceInfo(Long itemId, String itemName, String worldName) {
+	public List<ItemPriceInfo> requestItemPriceInfo(Long itemId, String worldName) {
 
 		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemId);
 		try (HttpResponse response = HttpUtil.createGet(url)
@@ -97,19 +98,11 @@ public class FF14PriceService {
 			if (response.getStatus() == 200) {
 
 				String body = response.body();
-				List<ItemPriceInfo> listings = JSONUtil.toBean(body, Listings.class).getListings();
-				if (!listings.isEmpty()) {
-					ItemPriceInfo first = listings.getFirst();
-					first.setId(String.valueOf(itemId));
-					first.setName(itemName);
-					return first;
-				}
+				return JSONUtil.toBean(body, Listings.class).getListings();
 			} else {
-				// todo notify
 				return null;
 			}
 		}
-		return null;
 	}
 
 	@Data

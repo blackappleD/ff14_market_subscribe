@@ -1,7 +1,7 @@
 package com.ff14.market.controller;
 
+import com.ff14.market.dto.SubscribeGroupResDTO;
 import com.ff14.market.dto.UserSubscribeGroupReqDTO;
-import com.ff14.market.dto.UserSubscribeResDTO;
 import com.ff14.market.service.FF14SubscribeGroupService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -23,7 +23,7 @@ public class FF14SubscribeController {
 	private FF14SubscribeGroupService ff14SubscribeGroupService;
 
 	@GetMapping
-	public List<UserSubscribeResDTO> get() {
+	public List<SubscribeGroupResDTO> get() {
 		return ff14SubscribeGroupService.get();
 	}
 

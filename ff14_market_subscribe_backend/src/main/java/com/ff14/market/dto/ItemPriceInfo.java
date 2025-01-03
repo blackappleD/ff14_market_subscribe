@@ -11,11 +11,6 @@ import lombok.Data;
  */
 @Data
 public class ItemPriceInfo {
-	@Schema(description = "物品id")
-	private String id;
-
-	@Schema(description = "物品名称")
-	private String name;
 	private long lastReviewTime;
 
 	@Schema(description = "物品单价")

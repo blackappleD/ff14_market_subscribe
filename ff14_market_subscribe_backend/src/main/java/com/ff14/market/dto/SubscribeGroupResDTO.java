@@ -12,7 +12,7 @@ import java.util.List;
  * @date 2024/12/19 12:00
  */
 @Data
-public class UserSubscribeResDTO {
+public class SubscribeGroupResDTO {
 
 	@Schema(description = "id")
 	private Long id;
