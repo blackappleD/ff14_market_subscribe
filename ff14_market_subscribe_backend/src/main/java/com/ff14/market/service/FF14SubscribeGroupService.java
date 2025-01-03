@@ -34,9 +34,6 @@ public class FF14SubscribeGroupService {
 	private FF14UserService ff14UserService;
 
 	@Resource
-	private FF14WorldService ff14WorldService;
-
-	@Resource
 	private FF14SubscribeGroupMapper ff14SubscribeGroupMapper;
 
 	public List<UserSubscribeResDTO> get() {
