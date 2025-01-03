@@ -3,11 +3,10 @@ package com.ff14.market.task;
 import cn.hutool.core.date.LocalDateTimeUtil;
 import com.ff14.market.dto.ItemDTO;
 import com.ff14.market.dto.ItemPriceInfo;
-import com.ff14.market.dto.ItemPriceInfoGroupByWorld;
+import com.ff14.market.dto.ItemPriceInfoGroup;
 import com.ff14.market.service.FF14MailService;
 import com.ff14.market.service.FF14PriceService;
 import com.ff14.market.service.FF14UserService;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -46,21 +45,13 @@ public class ScheduleTask {
 			return;
 		}
 		ff14UserService.findAllUser().forEach(user -> {
-			List<ItemPriceInfoGroupByWorld> itemPriceInfoGroupByWorlds = ff14PriceService.subscribeItemPrice(user);
-			ff14MailService.sendPriceSubscriptions(itemPriceInfoGroupByWorlds, user.getEmail());
+			List<ItemPriceInfoGroup> itemPriceInfoGroups = ff14PriceService.subscribeItemPrice(user);
+			ff14MailService.sendPriceSubscriptions(itemPriceInfoGroups, user.getEmail());
 		});
 
 	}
 
 
-	@Data
-	public static class Rows {
-		public List<ItemDTO> rows;
-	}
 
-	@Data
-	public static class Listings {
-		public List<ItemPriceInfo> listings;
-	}
 
 }

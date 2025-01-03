@@ -12,7 +12,7 @@ import java.util.List;
  * @date 2024/12/27 17:29
  */
 @Data
-public class ItemPriceInfoGroupByWorld {
+public class ItemPriceInfoGroup {
 
 	@Schema(description = "区服名称")
 	private String worldName;

@@ -38,6 +38,8 @@ public class ItemPriceInfo {
 	private boolean onMannequin;
 	private int retainerCity;
 	private String retainerId;
+
+	@Schema(description = "雇员名称")
 	private String retainerName;
 	private String sellerId;
 

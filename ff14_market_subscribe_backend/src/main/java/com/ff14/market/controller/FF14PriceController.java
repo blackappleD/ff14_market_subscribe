@@ -1,6 +1,6 @@
 package com.ff14.market.controller;
 
-import com.ff14.market.dto.ItemPriceInfoGroupByWorld;
+import com.ff14.market.dto.ItemPriceInfoGroup;
 import com.ff14.market.service.FF14PriceService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +23,7 @@ public class FF14PriceController {
 	private FF14PriceService ff14PriceService;
 
 	@GetMapping("/on_time")
-	public List<ItemPriceInfoGroupByWorld> subscribeItemPriceOnTime() {
+	public List<ItemPriceInfoGroup> subscribeItemPriceOnTime() {
 		return ff14PriceService.subscribeItemPriceOnTime();
 	}
 

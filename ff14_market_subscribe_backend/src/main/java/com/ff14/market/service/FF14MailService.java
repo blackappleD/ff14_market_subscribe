@@ -5,7 +5,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.extra.mail.MailAccount;
 import cn.hutool.extra.mail.MailUtil;
 import com.ff14.market.dto.ItemPriceInfo;
-import com.ff14.market.dto.ItemPriceInfoGroupByWorld;
+import com.ff14.market.dto.ItemPriceInfoGroup;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,7 +25,7 @@ public class FF14MailService {
 	@Resource
 	private MailAccount mailAccount;
 
-	public void sendPriceSubscriptions(List<ItemPriceInfoGroupByWorld> itemPriceInfos, String email) {
+	public void sendPriceSubscriptions(List<ItemPriceInfoGroup> itemPriceInfos, String email) {
 
 		if (!Validator.isEmail(email)) {
 			log.warn("不合法的邮箱地址：{}", email);
@@ -50,7 +50,7 @@ public class FF14MailService {
 		htmlContent.append("</tr>");
 
 		// 添加数据行
-		for (ItemPriceInfoGroupByWorld worldGroup : itemPriceInfos) {
+		for (ItemPriceInfoGroup worldGroup : itemPriceInfos) {
 
 			String worldName = worldGroup.getWorldName();
 			for (ItemPriceInfo item : worldGroup.getItemPriceInfoList()) {
