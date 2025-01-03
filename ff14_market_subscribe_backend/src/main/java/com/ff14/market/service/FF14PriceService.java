@@ -46,7 +46,6 @@ public class FF14PriceService {
 	public List<ItemPriceInfoGroup> subscribeItemPrice(FF14UserPO user) {
 		List<FF14SubscribeGroupPO> userSubscribeList = ff14SubscribeGroupService.findByUser(user);
 
-
 		return userSubscribeList.stream().map(userSubscribe -> {
 			ItemPriceInfoGroup data = new ItemPriceInfoGroup();
 			data.setWorldName(userSubscribe.getWorld().getName());

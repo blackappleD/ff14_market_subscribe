@@ -7,6 +7,7 @@ import com.ff14.market.dto.ItemPriceInfoGroup;
 import com.ff14.market.service.FF14MailService;
 import com.ff14.market.service.FF14PriceService;
 import com.ff14.market.service.FF14UserService;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,7 @@ public class ScheduleTask {
 	@Resource
 	private FF14UserService ff14UserService;
 
+	@PostConstruct
 	@Scheduled(cron = "0 0/30 * * * ? ")
 	public void ff14Task() {
 
