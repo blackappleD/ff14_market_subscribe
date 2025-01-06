@@ -30,7 +30,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from 'vue';
+import { defineComponent, computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { RootState } from '@/store/types';
@@ -41,6 +41,7 @@ export default defineComponent({
     setup() {
         const router = useRouter();
         const store = useStore<RootState>();
+        const userInfo = ref<any>(null);
 
         const isLoggedIn = computed(() => store.state.auth.isLoggedIn);
         const username = computed(() => store.state.auth.username);
@@ -56,21 +57,35 @@ export default defineComponent({
 
         const handleLogout = async () => {
             try {
-                // 调用后端退出登录接口
                 await axios.post('/ff14/user/logout');
-
-                // 清除本地存储的登录状态
                 store.commit('auth/logout');
-
-                // 清除 axios 请求头中的 token
                 delete axios.defaults.headers.common['Authorization'];
-
-                // 跳转到登录页面
                 router.push('/login');
             } catch (error) {
                 console.error('退出登录失败:', error);
             }
         };
+
+        const fetchUserInfo = async () => {
+            try {
+                const response = await axios.get('/ff14/user/info');
+                userInfo.value = response.data.data;
+                if (userInfo.value) {
+                    store.commit('auth/setUser', {
+                        userName: userInfo.value.userName,
+                        email: userInfo.value.email
+                    });
+                }
+            } catch (error) {
+                console.error('获取用户信息失败:', error);
+            }
+        };
+
+        onMounted(() => {
+            if (isLoggedIn.value) {
+                fetchUserInfo();
+            }
+        });
 
         return {
             isLoggedIn,

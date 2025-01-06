@@ -34,7 +34,6 @@ mail:
 auth:
   jwt:
     enable: true
-    secret: "test"
-    expire: 999999999
+    expire: 720000
 cache:
   mode: caffeine

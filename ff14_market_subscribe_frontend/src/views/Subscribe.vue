@@ -243,7 +243,7 @@ export default defineComponent({
             }
             try {
                 const response = await axios.get(`/ff14/world/search?name=${search}`);
-                subscriptionGroups.value[groupIndex].worldResults = response.data;
+                subscriptionGroups.value[groupIndex].worldResults = response.data.data;
             } catch (error) {
                 console.error('搜索区服失败:', error);
             }
@@ -253,7 +253,7 @@ export default defineComponent({
             const search = subscriptionGroups.value[groupIndex].items[itemIndex].nameSearch;
             try {
                 const response = await axios.get(`/ff14/item/search?name=${search}`);
-                subscriptionGroups.value[groupIndex].items[itemIndex].searchResults = response.data;
+                subscriptionGroups.value[groupIndex].items[itemIndex].searchResults = response.data.data;
             } catch (error) {
                 console.error('搜索物品失败:', error);
             }
@@ -336,7 +336,7 @@ export default defineComponent({
         const fetchSubscriptions = async () => {
             try {
                 const response = await axios.get('/ff14/subscribe');
-                const subscriptions: UserSubscribeResDTO[] = response.data;
+                const subscriptions: UserSubscribeResDTO[] = response.data.data;
 
                 // 转换后端数据格式为前端格式，保留 ID
                 subscriptionGroups.value = subscriptions.map(sub => ({
@@ -431,13 +431,13 @@ export default defineComponent({
 
                 // 调用保存接口并获取返回数据
                 const response = await axios.post('/ff14/subscribe', subscribeData);
-                showToast('保存成功');
+                showToast(response.data.message || '保存成功');
 
                 // 使用返回的数据更新本地状态
                 await fetchSubscriptions();
             } catch (error: any) {
                 console.error('保存订阅失败:', error);
-                showToast(error.response?.data?.message || '保存失败，请重试', 'error');
+                showToast(error.response?.data?.message || error.response?.data?.data || '保存失败，请重试', 'error');
             }
         };
 

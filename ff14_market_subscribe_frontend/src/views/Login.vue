@@ -52,7 +52,7 @@ export default defineComponent({
                 console.log('Login response:', loginResponse.data);
 
                 // 2. 设置 token
-                const { tokenValue, userId } = loginResponse.data;
+                const { tokenValue } = loginResponse.data.data;
                 if (!tokenValue) {
                     throw new Error('登录返回的数据格式不正确');
                 }
@@ -65,7 +65,7 @@ export default defineComponent({
                 const userInfoResponse = await axios.get(`/ff14/user/info`);
                 console.log('User info response:', userInfoResponse.data);
 
-                const userInfo = userInfoResponse.data;
+                const userInfo = userInfoResponse.data.data;
                 if (userInfo) {
                     store.commit('auth/setUser', {
                         userName: userInfo.userName,
@@ -77,7 +77,7 @@ export default defineComponent({
                 router.push('/');
             } catch (error: any) {
                 console.error('登录失败:', error);
-                const errorMessage = error.response?.data?.message || '登录失败，请重试';
+                const errorMessage = error.response?.data?.message || error.response?.data?.data || '登录失败，请重试';
                 alert(errorMessage);
             }
         };

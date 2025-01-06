@@ -75,12 +75,12 @@ export default defineComponent({
             }
 
             try {
-                await axios.post('/ff14/user/register', user.value);
-                alert('注册成功！');
+                const response = await axios.post('/ff14/user/register', user.value);
+                alert(response.data.message || '注册成功！');
                 router.push('/login');
             } catch (error: any) {
                 console.error('注册失败:', error);
-                alert(error.response?.data?.message || '注册失败，请重试');
+                alert(error.response?.data?.message || error.response?.data?.data || '注册失败，请重试');
             }
         };
 

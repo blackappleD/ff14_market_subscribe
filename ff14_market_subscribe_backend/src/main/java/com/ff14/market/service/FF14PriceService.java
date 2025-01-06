@@ -80,7 +80,7 @@ public class FF14PriceService {
 					.map(itemSub -> String.valueOf(itemSub.getItem().getId()))
 					.collect(Collectors.joining(","));
 			String hqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, hqItemIdStr, true);
-			list.addAll(request(itemIdNameMap, hqUrl));
+			list.addAll(request(itemIdNameMap, worldName, hqUrl));
 		}
 		if (notHqItemSubs.size() == 1) {
 			list.add(SubscribePriceGroup.ItemPriceGroup.builder()
@@ -95,14 +95,14 @@ public class FF14PriceService {
 					.collect(Collectors.joining(","));
 
 			String nqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, notHqItemIdStr, "");
-			list.addAll(request(itemIdNameMap, nqUrl));
+			list.addAll(request(itemIdNameMap, worldName, nqUrl));
 		}
 		return list;
 
 	}
 
 
-	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, FF14ItemSubPO> itemIdNameMap, String hqUrl) {
+	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, FF14ItemSubPO> itemIdNameMap, String worldName, String hqUrl) {
 		try (HttpResponse response = HttpUtil.createGet(hqUrl)
 				.execute()) {
 			if (response.getStatus() == 200) {
@@ -118,6 +118,9 @@ public class FF14PriceService {
 					listings.forEach(listing -> {
 						if (Objects.nonNull(itemSub.getNotifyThreshold())) {
 							listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
+						}
+						if (CharSequenceUtil.isBlank(listing.getWorldName())) {
+							listing.setWorldName(worldName);
 						}
 					});
 					itemPriceGroup.setItemPriceInfoList(listings);
@@ -139,6 +142,9 @@ public class FF14PriceService {
 				listings.forEach(listing -> {
 					if (Objects.nonNull(itemSub.getNotifyThreshold())) {
 						listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
+					}
+					if (CharSequenceUtil.isBlank(listing.getWorldName())) {
+						listing.setWorldName(worldName);
 					}
 				});
 				return listings;

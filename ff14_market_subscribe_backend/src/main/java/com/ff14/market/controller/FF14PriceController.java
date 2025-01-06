@@ -1,5 +1,6 @@
 package com.ff14.market.controller;
 
+import com.ff14.market.annotations.FF14ResponseBody;
 import com.ff14.market.dto.SubscribePriceGroup;
 import com.ff14.market.service.FF14PriceService;
 import jakarta.annotation.Resource;
@@ -17,6 +18,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/ff14/price")
+@FF14ResponseBody
 public class FF14PriceController {
 
 	@Resource

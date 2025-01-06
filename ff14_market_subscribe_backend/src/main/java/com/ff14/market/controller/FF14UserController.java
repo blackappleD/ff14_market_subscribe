@@ -1,5 +1,6 @@
 package com.ff14.market.controller;
 
+import com.ff14.market.annotations.FF14ResponseBody;
 import com.ff14.market.auth.TokenInfo;
 import com.ff14.market.dto.UserRegisterReqDTO;
 import com.ff14.market.dto.UserResDTO;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/ff14/user")
+@FF14ResponseBody
 public class FF14UserController {
 
 	@Resource

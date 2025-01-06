@@ -1,6 +1,7 @@
 package com.ff14.market.controller;
 
 import cn.hutool.core.text.CharSequenceUtil;
+import com.ff14.market.annotations.FF14ResponseBody;
 import com.ff14.market.dto.ItemDTO;
 import com.ff14.market.service.FF14ItemService;
 import jakarta.annotation.Resource;
@@ -11,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/ff14/item")
+@FF14ResponseBody
 public class FF14ItemController {
 
     @Resource

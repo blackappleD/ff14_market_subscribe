@@ -179,9 +179,7 @@ export default defineComponent({
         const checkSubscriptions = async () => {
             try {
                 const response = await axios.get('/ff14/subscribe');
-                console.log('订阅数据:', response.data);
-                hasSubscriptions.value = response.data && response.data.length > 0;
-                console.log('是否有订阅:', hasSubscriptions.value);
+                hasSubscriptions.value = response.data.data && response.data.data.length > 0;
                 if (hasSubscriptions.value) {
                     if (!checkCooldown()) {
                         await fetchPriceData();
@@ -189,9 +187,7 @@ export default defineComponent({
                         // 如果在冷却时间内，尝试从缓存加载数据
                         const cachedData = localStorage.getItem('price_data');
                         if (cachedData) {
-                            console.log('缓存数据:', JSON.parse(cachedData));
                             priceData.value = JSON.parse(cachedData);
-                            console.log('当前展示数据:', priceData.value);
                             const savedLastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
                             if (savedLastUpdate) {
                                 lastUpdateTime.value = new Date(parseInt(savedLastUpdate));
@@ -204,7 +200,7 @@ export default defineComponent({
                 if (error.response?.status === 401) {
                     router.push('/login');
                 } else {
-                    console.error('检查订阅状态失败:', error);
+                    alert(error.response?.data?.message || error.response?.data?.data || '检查订阅状态失败，请重试');
                 }
             } finally {
                 isLoading.value = false;
@@ -238,17 +234,11 @@ export default defineComponent({
             try {
                 loading.value = true;
                 const response = await axios.get('/ff14/price/on_time');
-                console.log('Price data response:', response.data);
-                if (Array.isArray(response.data)) {
-                    priceData.value = response.data;
-                } else {
-                    console.error('Unexpected data format:', response.data);
-                    priceData.value = [];
-                }
+                priceData.value = response.data.data;
                 lastUpdateTime.value = new Date();
 
                 // 缓存数据
-                localStorage.setItem('price_data', JSON.stringify(response.data));
+                localStorage.setItem('price_data', JSON.stringify(response.data.data));
                 updateCooldownStorage();
                 startCooldown();
             } catch (error: any) {
@@ -256,7 +246,7 @@ export default defineComponent({
                 if (error.response?.status === 401) {
                     router.push('/login');
                 } else {
-                    alert(error.response?.data?.message || '获取数据失败，请重试');
+                    alert(error.response?.data?.message || error.response?.data?.data || '获取数据失败，请重试');
                 }
             } finally {
                 loading.value = false;

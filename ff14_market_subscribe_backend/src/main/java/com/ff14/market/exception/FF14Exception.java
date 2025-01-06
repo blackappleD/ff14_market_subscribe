@@ -1,6 +1,11 @@
 package com.ff14.market.exception;
 
 import cn.hutool.core.text.CharSequenceUtil;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.io.Serial;
 
 /**
  * @author chentong
@@ -8,10 +13,55 @@ import cn.hutool.core.text.CharSequenceUtil;
  * @description: description
  * @date 2024/12/19 12:04
  */
+@Getter
 public class FF14Exception extends RuntimeException {
-	public FF14Exception(String message) {
-		super(message);
+
+	@Serial
+	private static final long serialVersionUID = 1405961065280191434L;
+
+	public static final int DEFAULT_CODE = 500;
+	public static final String DEFAULT_MSG = "系统错误";
+
+	private final int code;
+
+	@Setter(AccessLevel.PROTECTED)
+	private boolean log;
+
+	private final String message;
+
+	protected FF14Exception(int code, String message, Throwable cause, boolean log) {
+		super(cause);
+		this.code = code;
+		this.message = message;
+		this.log = log;
 	}
+
+
+	protected FF14Exception(int code, String message, Throwable cause) {
+		this(code, message, cause, false);
+	}
+
+	protected FF14Exception(int code, String message) {
+		this(code, message, null, false);
+	}
+
+
+	public FF14Exception() {
+		this(DEFAULT_CODE, DEFAULT_MSG, null, false);
+	}
+
+	public FF14Exception(String message) {
+		this(DEFAULT_CODE, message, null, false);
+	}
+
+	public FF14Exception(String message, Throwable cause, boolean log) {
+		this(DEFAULT_CODE, message, cause, log);
+	}
+
+	public FF14Exception(String message, Throwable cause) {
+		this(DEFAULT_CODE, message, cause, false);
+	}
+
 
 	public static class WorldException extends RuntimeException {
 
@@ -55,13 +105,13 @@ public class FF14Exception extends RuntimeException {
 		}
 	}
 
-	public static class LoginException extends UserException {
+	public static class LoginException extends FF14Exception {
 		public static LoginException loginInvalid() {
-			throw new LoginException("登录失败");
+			return new LoginException("登录失败");
 		}
 
 		private LoginException(String message) {
-			super(message);
+			super(401, message);
 		}
 	}
 
