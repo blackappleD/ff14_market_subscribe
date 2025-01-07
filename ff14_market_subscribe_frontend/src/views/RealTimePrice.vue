@@ -21,7 +21,7 @@
                     </span>
                 </div>
             </div>
-
+ 
             <!-- 加载状态显示 -->
             <div v-if="isLoading" class="loading-state">
                 数据加载中，请稍后...
