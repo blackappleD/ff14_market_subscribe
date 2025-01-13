@@ -8,10 +8,9 @@ import cn.hutool.json.JSONUtil;
 import com.ff14.market.dto.ItemDTO;
 import com.ff14.market.dto.ItemPriceInfo;
 import com.ff14.market.dto.SubscribePriceGroup;
-import com.ff14.market.po.FF14ItemPO;
 import com.ff14.market.po.FF14ItemSubPO;
-import com.ff14.market.po.FF14UserPO;
 import com.ff14.market.po.FF14SubscribeGroupPO;
+import com.ff14.market.po.FF14UserPO;
 import com.ff14.market.util.AdminUtil;
 import jakarta.annotation.Resource;
 import lombok.Data;
@@ -21,6 +20,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,6 +41,9 @@ public class FF14PriceService {
 
 
 	@Resource
+	private ThreadPoolExecutor threadPoolExecutor;
+
+	@Resource
 	private FF14SubscribeGroupService ff14SubscribeGroupService;
 
 	public List<SubscribePriceGroup> subscribeItemPriceOnTime() {
@@ -50,11 +55,18 @@ public class FF14PriceService {
 		List<FF14SubscribeGroupPO> userSubscribeList = ff14SubscribeGroupService.findByUser(user);
 
 		return userSubscribeList.stream().map(userSubscribe -> {
-			SubscribePriceGroup data = new SubscribePriceGroup();
-			data.setId(userSubscribe.getId());
-			data.setWorldName(userSubscribe.getWorld().getName());
-			data.setItemPriceGroups(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName()));
-			return data;
+			Future<SubscribePriceGroup> submit = threadPoolExecutor.submit(() -> {
+				SubscribePriceGroup data = new SubscribePriceGroup();
+				data.setId(userSubscribe.getId());
+				data.setWorldName(userSubscribe.getWorld().getName());
+				data.setItemPriceGroups(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName()));
+				return data;
+			});
+			try {
+				return submit.get();
+			} catch (InterruptedException | ExecutionException e) {
+				throw new RuntimeException(e);
+			}
 		}).toList();
 	}
 
