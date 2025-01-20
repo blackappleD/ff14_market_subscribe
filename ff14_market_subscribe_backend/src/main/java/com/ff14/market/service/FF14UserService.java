@@ -12,6 +12,7 @@ import com.ff14.market.repo.FF14UserRepo;
 import com.ff14.market.util.AuthUtil;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +31,9 @@ public class FF14UserService {
 
 	@Resource
 	private FF14UserMapper ff14UserMapper;
+
+	@Resource
+	private FF14SubscribeCfgService ff14SubscribeCfgService;
 
 	public UserResDTO get(String id) {
 		return ff14UserMapper.po2dto(findById(id));
@@ -65,6 +69,7 @@ public class FF14UserService {
 		AuthUtil.logout();
 	}
 
+	@Transactional
 	public void insert(UserRegisterReqDTO dto) {
 
 		if (ff14UserRepo.existsByEmail(dto.getEmail())) {
@@ -74,6 +79,8 @@ public class FF14UserService {
 		// 加密密码
 		user.setPassword(BCrypt.hashpw(dto.getPassword()));
 		ff14UserRepo.save(user);
+
+		ff14SubscribeCfgService.create(user);
 
 	}
 

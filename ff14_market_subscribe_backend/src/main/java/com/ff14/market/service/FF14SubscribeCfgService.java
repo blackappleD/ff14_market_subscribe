@@ -54,6 +54,14 @@ public class FF14SubscribeCfgService {
 		return ff14SubscribeCfgRepo.findByUser(user).orElseThrow(() -> new FF14Exception("订阅配置不存在"));
 	}
 
+	public void create(FF14UserPO user) {
+
+		FF14SubscribeCfgPO po = new FF14SubscribeCfgPO();
+		po.setUser(user);
+		ff14SubscribeCfgRepo.save(po);
+
+	}
+
 	public void update(SubscribeCfgReqDTO dto) {
 		FF14SubscribeCfgPO subscribeCfg = findById(dto.getId());
 		ff14SubscribeCfgMapper.dto2po(dto, subscribeCfg);
@@ -62,23 +70,6 @@ public class FF14SubscribeCfgService {
 
 	public FF14SubscribeCfgPO findById(Long id) {
 		return ff14SubscribeCfgRepo.findById(id).orElseThrow(() -> new FF14Exception("订阅配置不存在"));
-	}
-
-	@PostConstruct
-	public void test() {
-		FF14UserRepo userRepo = SpringUtil.getBean(FF14UserRepo.class);
-		List<FF14UserPO> users = userRepo.findAll();
-
-
-		List<FF14SubscribeCfgPO> list = users.stream().map(user -> {
-			FF14SubscribeCfgPO cfg = new FF14SubscribeCfgPO();
-			cfg.setUser(user);
-			return cfg;
-		}).toList();
-
-		FF14SubscribeCfgRepo repo = SpringUtil.getBean(FF14SubscribeCfgRepo.class);
-		repo.saveAll(list);
-
 	}
 
 }
