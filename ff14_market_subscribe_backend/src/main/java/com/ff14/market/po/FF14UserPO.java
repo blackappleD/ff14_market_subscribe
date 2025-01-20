@@ -7,6 +7,8 @@ import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.GenericGenerator;
 
+import java.time.LocalDateTime;
+
 /**
  * @author chentong
  * @version 1.0
@@ -41,5 +43,11 @@ public class FF14UserPO {
 	@Column(length = 60)
 	@Comment("密码")
 	private String password;
+
+	@Comment("最后登录时间")
+	private LocalDateTime lastLoginTime;
+
+	@Comment("注册时间")
+	private LocalDateTime registerTime;
 
 }

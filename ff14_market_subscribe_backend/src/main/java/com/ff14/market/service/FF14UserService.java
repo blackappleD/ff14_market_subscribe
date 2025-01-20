@@ -14,6 +14,7 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,6 +63,8 @@ public class FF14UserService {
 		if (!BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
 			throw FF14Exception.UserException.passwordError();
 		}
+		user.setLastLoginTime(LocalDateTime.now());
+		ff14UserRepo.save(user);
 		return AuthUtil.login(user.getId());
 	}
 
@@ -79,7 +82,7 @@ public class FF14UserService {
 		// 加密密码
 		user.setPassword(BCrypt.hashpw(dto.getPassword()));
 		ff14UserRepo.save(user);
-
+		user.setRegisterTime(LocalDateTime.now());
 		ff14SubscribeCfgService.create(user);
 
 	}
