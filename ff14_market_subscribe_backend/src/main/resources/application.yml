@@ -29,8 +29,8 @@ mail:
   smtp:
     host: smtp.163.com
     port: 465
-    mail-from: aChen1874@163.com
-    password: QZb5W3BjxEnfuvtF
+    mail-from: aChen1996kkxx@163.com
+    password: FWS3Y37CKuDSE7fG
 auth:
   jwt:
     enable: true
