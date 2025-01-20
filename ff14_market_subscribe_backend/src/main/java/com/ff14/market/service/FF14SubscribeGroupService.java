@@ -24,7 +24,8 @@ import java.util.stream.Collectors;
  * @date 2024/12/19 11:24
  */
 @Service
-public class FF14SubscribeGroupService {
+public class
+FF14SubscribeGroupService {
 
 	@Resource
 	private FF14UserSubscribeRepo ff14UserSubscribeRepo;

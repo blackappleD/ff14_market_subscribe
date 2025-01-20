@@ -9,6 +9,13 @@
         <div class="content">
             <div class="title-section">
                 <h2 class="page-title">物品订阅</h2>
+                <div class="notify-toggle">
+                    <label class="switch">
+                        <input type="checkbox" v-model="notifyEnabled" @change="handleNotifyToggle">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="notify-text">{{ notifyEnabled ? '已开启推送通知' : '已关闭推送通知' }}</span>
+                </div>
                 <p class="description"> *订阅物品会每隔半小时进行推送通知，目前支持的推送方式：邮件</p>
                 <p class="description"> *满足价格阈值条件的物品，会在实时物价和物价推送中被标记为红色</p>
             </div>
@@ -223,6 +230,30 @@ export default defineComponent({
             setTimeout(() => {
                 toast.value.show = false;
             }, 3000);
+        };
+
+        const notifyEnabled = ref(true);
+
+        // 获取通知配置
+        const fetchNotifyConfig = async () => {
+            try {
+                const response = await axios.get('/ff14/sub_cfg');
+                notifyEnabled.value = response.data.data.notify;
+            } catch (error) {
+                console.error('获取通知配置失败:', error);
+            }
+        };
+
+        // 处理通知开关切换
+        const handleNotifyToggle = async () => {
+            try {
+                await axios.put(`/ff14/sub_cfg/notify?notify=${notifyEnabled.value}`);
+                showToast(notifyEnabled.value ? '已开启推送通知' : '已关闭推送通知');
+            } catch (error: any) {
+                console.error('修改通知配置失败:', error);
+                notifyEnabled.value = !notifyEnabled.value; // 切换失败时恢复状态
+                showToast(error.response?.data?.message || '修改通知配置失败', 'error');
+            }
         };
 
         // 修改区服搜索逻辑，分为初始加载和搜索两个函数
@@ -444,6 +475,7 @@ export default defineComponent({
         // 在组件挂载时调用获取订阅信息的函数
         onMounted(() => {
             fetchSubscriptions();
+            fetchNotifyConfig();
         });
 
         return {
@@ -460,7 +492,9 @@ export default defineComponent({
             deleteItem,
             fetchSubscriptions,
             toast,
-            handleSubmit
+            handleSubmit,
+            notifyEnabled,
+            handleNotifyToggle
         };
     }
 });
@@ -518,6 +552,17 @@ export default defineComponent({
     margin: 0;
 }
 
+.notify-toggle {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.notify-text {
+    margin-left: 10px;
+    color: #666;
+    font-size: 14px;
+}
 
 .description {
     font-size: 11px;
@@ -740,5 +785,57 @@ input[type="number"]::-webkit-outer-spin-button {
 .hq-toggle input:checked+.hq-label {
     background-color: #4285f4;
     color: white;
+}
+
+/* 开关样式 */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #4285f4;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
 }
 </style>

@@ -1,6 +1,7 @@
 package com.ff14.market.service;
 
 import com.ff14.market.dto.ItemDTO;
+import com.ff14.market.exception.FF14Exception;
 import com.ff14.market.mapper.FF14ItemMapper;
 import com.ff14.market.po.FF14ItemPO;
 import com.ff14.market.repo.FF14ItemRepo;
@@ -31,4 +32,9 @@ public class FF14ItemService {
 				.map(ff14ItemMapper::po2dto)
 				.collect(Collectors.toList());
 	}
+
+	public FF14ItemPO findById(Long id) {
+		return ff14ItemRepo.findById(id).orElseThrow(() -> new FF14Exception("物品不存在"));
+	}
+
 }

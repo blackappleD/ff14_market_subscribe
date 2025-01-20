@@ -59,6 +59,9 @@ dependencies {
 
 // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-validation
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // https://mvnrepository.com/artifact/com.alibaba/easyexcel
+    implementation 'com.alibaba:easyexcel:4.0.3'
+
 
 }
 

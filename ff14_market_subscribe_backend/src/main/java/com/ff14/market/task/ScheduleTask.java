@@ -2,8 +2,10 @@ package com.ff14.market.task;
 
 import cn.hutool.core.date.LocalDateTimeUtil;
 import com.ff14.market.dto.SubscribePriceGroup;
+import com.ff14.market.po.FF14SubscribeCfgPO;
 import com.ff14.market.service.FF14MailService;
 import com.ff14.market.service.FF14PriceService;
+import com.ff14.market.service.FF14SubscribeCfgService;
 import com.ff14.market.service.FF14UserService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,9 @@ import java.util.List;
 public class ScheduleTask {
 
 	@Resource
+	private FF14SubscribeCfgService ff14SubscribeCfgService;
+
+	@Resource
 	private FF14MailService ff14MailService;
 
 	@Resource
@@ -42,13 +47,13 @@ public class ScheduleTask {
 			return;
 		}
 		ff14UserService.findAllUser().forEach(user -> {
-			List<SubscribePriceGroup> subscribePriceGroups = ff14PriceService.subscribeItemPrice(user);
-			ff14MailService.sendPriceSubscriptions(subscribePriceGroups, user.getEmail());
+			FF14SubscribeCfgPO subCfg = ff14SubscribeCfgService.findByUser(user);
+			if (subCfg.getNotify()) {
+				List<SubscribePriceGroup> subscribePriceGroups = ff14PriceService.subscribeItemPrice(user);
+				ff14MailService.sendPriceSubscriptions(subscribePriceGroups, user.getEmail());
+			}
 		});
 
 	}
-
-
-
 
 }
