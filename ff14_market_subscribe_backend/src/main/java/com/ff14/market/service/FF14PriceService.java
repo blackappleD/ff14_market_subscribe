@@ -134,6 +134,7 @@ public class FF14PriceService {
 						if (CharSequenceUtil.isBlank(listing.getWorldName())) {
 							listing.setWorldName(worldName);
 						}
+						listing.setTotal(listing.getTotal() + listing.getTax());
 					});
 					itemPriceGroup.setItemPriceInfoList(listings);
 					return itemPriceGroup;
@@ -158,6 +159,7 @@ public class FF14PriceService {
 					if (CharSequenceUtil.isBlank(listing.getWorldName())) {
 						listing.setWorldName(worldName);
 					}
+					listing.setTotal(listing.getTotal() + listing.getTax());
 				});
 				return listings;
 			} else {
