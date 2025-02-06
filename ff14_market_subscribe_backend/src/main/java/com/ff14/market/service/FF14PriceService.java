@@ -118,7 +118,7 @@ public class FF14PriceService {
 	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, FF14ItemSubPO> itemIdNameMap, String worldName, String hqUrl) {
 		try (HttpResponse response = HttpUtil.createGet(hqUrl)
 				.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
-				.timeout(30000)
+				.timeout(60000)
 				.execute()) {
 			if (response.getStatus() == 200) {
 
@@ -152,7 +152,7 @@ public class FF14PriceService {
 		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), itemSub.getHq());
 		try (HttpResponse response = HttpUtil.createGet(url)
 				.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
-				.timeout(30000)
+				.timeout(60000)
 				.execute()) {
 			if (response.getStatus() == 200) {
 				String body = response.body();

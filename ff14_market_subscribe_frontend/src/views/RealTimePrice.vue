@@ -230,13 +230,13 @@ export default defineComponent({
 
         const fetchPriceData = async () => {
             if (loading.value || cooldownTime.value > 0) return;
-
             try {
                 loading.value = true;
-                const response = await axios.get('/ff14/price/on_time');
+                // 增加超时时间为 60 秒，等待接口较长时间响应
+                const response = await axios.get('/ff14/price/on_time', { timeout: 60000 });
                 priceData.value = response.data.data;
                 lastUpdateTime.value = new Date();
-
+                
                 // 缓存数据
                 localStorage.setItem('price_data', JSON.stringify(response.data.data));
                 updateCooldownStorage();
@@ -246,7 +246,12 @@ export default defineComponent({
                 if (error.response?.status === 401) {
                     router.push('/login');
                 } else {
-                    alert(error.response?.data?.message || error.response?.data?.data || '获取数据失败，请重试');
+                    // 对超时错误进行额外判断
+                    if (error.code === 'ECONNABORTED') {
+                        alert('请求超时，数据加载较慢，请稍后重试');
+                    } else {
+                        alert(error.response?.data?.message || error.response?.data?.data || '获取数据失败，请重试');
+                    }
                 }
             } finally {
                 loading.value = false;
