@@ -182,7 +182,7 @@ public class FF14PriceService {
 				try {
 					log.warn("请求universalis api异常:{}，剩余重试次数{}，准备重新调用！", e.getMessage(), retryTimes);
 					// 指数退避策略，每次增加等待时间
-					Thread.sleep(500L * (4 - retryTimes));
+					Thread.sleep(1000L * (4 - retryTimes));
 				} catch (InterruptedException ex) {
 					Thread.currentThread().interrupt(); // 保持中断状态
 					throw new FF14Exception("请求被中断");
