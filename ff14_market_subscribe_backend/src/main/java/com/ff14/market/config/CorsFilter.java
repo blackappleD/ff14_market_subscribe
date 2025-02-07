@@ -21,6 +21,7 @@ public class CorsFilter implements Filter {
 
         String origin = request.getHeader("Origin");
         if (origin != null && (origin.equals("http://localhost:3000") ||
+                origin.equals("http://localhost:3002") ||
                 origin.equals("https://pangkazhuzhu.top:32323") ||
                 origin.equals("https://192.168.1.77:32323"))) {
             response.setHeader("Access-Control-Allow-Origin", origin);
