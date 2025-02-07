@@ -19,7 +19,7 @@ public class ThreadPoolExecutorConfig {
 
 	@Bean
 	public ThreadPoolExecutor threadPoolExecutor() {
-		return new ThreadPoolExecutor(7, 7,
+		return new ThreadPoolExecutor(5, 5,
 				1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), new Sleep5sResubmitHandler());
 	}
 
