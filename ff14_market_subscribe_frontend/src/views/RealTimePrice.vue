@@ -233,7 +233,7 @@ export default defineComponent({
             try {
                 loading.value = true;
                 // 增加超时时间为 60 秒，等待接口较长时间响应
-                const response = await axios.get('/ff14/price/on_time', { timeout: 60000 });
+                const response = await axios.get('/ff14/price/on_time', { timeout: 120000 });
                 priceData.value = response.data.data;
                 lastUpdateTime.value = new Date();
                 
