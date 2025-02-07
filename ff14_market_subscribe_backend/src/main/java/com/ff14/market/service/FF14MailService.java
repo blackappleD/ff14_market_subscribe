@@ -72,7 +72,6 @@ public class FF14MailService {
 		try {
 			MailUtil.send(mailAccount, email, "ff14订阅物品价格信息", htmlContent.toString(), true);
 			log.info("邮件发送成功：{}", email);
-			System.out.println("邮件发送成功：" + email);
 		} catch (Exception e) {
 			log.info("邮件发送失败：{}", e.getMessage());
 		}
