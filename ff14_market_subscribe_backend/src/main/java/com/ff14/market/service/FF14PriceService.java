@@ -56,18 +56,11 @@ public class FF14PriceService {
 		List<FF14SubscribeGroupPO> userSubscribeList = ff14SubscribeGroupService.findByUser(user);
 
 		return userSubscribeList.stream().map(userSubscribe -> {
-			Future<SubscribePriceGroup> submit = threadPoolExecutor.submit(() -> {
-				SubscribePriceGroup data = new SubscribePriceGroup();
-				data.setId(userSubscribe.getId());
-				data.setWorldName(userSubscribe.getWorld().getName());
-				data.setItemPriceGroups(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName()));
-				return data;
-			});
-			try {
-				return submit.get();
-			} catch (InterruptedException | ExecutionException e) {
-				throw new RuntimeException(e);
-			}
+			SubscribePriceGroup data = new SubscribePriceGroup();
+			data.setId(userSubscribe.getId());
+			data.setWorldName(userSubscribe.getWorld().getName());
+			data.setItemPriceGroups(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName()));
+			return data;
 		}).toList();
 	}
 
@@ -116,47 +109,27 @@ public class FF14PriceService {
 
 
 	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, FF14ItemSubPO> itemIdNameMap, String worldName, String hqUrl) {
-		try (HttpResponse response = HttpUtil.createGet(hqUrl)
+		Future<HttpResponse> submit = threadPoolExecutor.submit(() -> HttpUtil.createGet(hqUrl)
 				.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
 				.timeout(60000)
-				.execute()) {
-			if (response.getStatus() == 200) {
+				.execute());
 
-				String body = response.body();
-				Map<String, Listings> itemListingsMap = JSONUtil.toBean(body, BatchItemsPrice.class).getItems();
-				return itemListingsMap.entrySet().stream().map(entry -> {
-					SubscribePriceGroup.ItemPriceGroup itemPriceGroup = new SubscribePriceGroup.ItemPriceGroup();
-					itemPriceGroup.setId(Long.valueOf(entry.getKey()));
-					FF14ItemSubPO itemSub = itemIdNameMap.get(entry.getKey());
-					itemPriceGroup.setName(itemSub.getItem().getName());
-					List<ItemPriceInfo> listings = entry.getValue().getListings();
-					listings.forEach(listing -> {
-						if (Objects.nonNull(itemSub.getNotifyThreshold())) {
-							listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
-						}
-						if (CharSequenceUtil.isBlank(listing.getWorldName())) {
-							listing.setWorldName(worldName);
-						}
-						listing.setTotal(listing.getTotal() + listing.getTax());
-					});
-					itemPriceGroup.setItemPriceInfoList(listings);
-					return itemPriceGroup;
-				}).toList();
-			}
-			return new ArrayList<>();
+		HttpResponse response;
+		try {
+			response = submit.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
 		}
-	}
+		if (response.getStatus() == 200) {
 
-	public List<ItemPriceInfo> requestItemPriceInfo(FF14ItemSubPO itemSub, String worldName) {
-
-		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), itemSub.getHq());
-		try (HttpResponse response = HttpUtil.createGet(url)
-				.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
-				.timeout(60000)
-				.execute()) {
-			if (response.getStatus() == 200) {
-				String body = response.body();
-				List<ItemPriceInfo> listings = JSONUtil.toBean(body, Listings.class).getListings();
+			String body = response.body();
+			Map<String, Listings> itemListingsMap = JSONUtil.toBean(body, BatchItemsPrice.class).getItems();
+			return itemListingsMap.entrySet().stream().map(entry -> {
+				SubscribePriceGroup.ItemPriceGroup itemPriceGroup = new SubscribePriceGroup.ItemPriceGroup();
+				itemPriceGroup.setId(Long.valueOf(entry.getKey()));
+				FF14ItemSubPO itemSub = itemIdNameMap.get(entry.getKey());
+				itemPriceGroup.setName(itemSub.getItem().getName());
+				List<ItemPriceInfo> listings = entry.getValue().getListings();
 				listings.forEach(listing -> {
 					if (Objects.nonNull(itemSub.getNotifyThreshold())) {
 						listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
@@ -166,10 +139,43 @@ public class FF14PriceService {
 					}
 					listing.setTotal(listing.getTotal() + listing.getTax());
 				});
-				return listings;
-			} else {
-				return new ArrayList<>();
-			}
+				itemPriceGroup.setItemPriceInfoList(listings);
+				return itemPriceGroup;
+			}).toList();
+		}
+		return new ArrayList<>();
+	}
+
+	public List<ItemPriceInfo> requestItemPriceInfo(FF14ItemSubPO itemSub, String worldName) {
+
+		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), itemSub.getHq());
+
+		Future<HttpResponse> submit = threadPoolExecutor.submit(() -> HttpUtil.createGet(url)
+				.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
+				.timeout(60000)
+				.execute()
+		);
+		HttpResponse response;
+		try {
+			response = submit.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
+		}
+		if (response.getStatus() == 200) {
+			String body = response.body();
+			List<ItemPriceInfo> listings = JSONUtil.toBean(body, Listings.class).getListings();
+			listings.forEach(listing -> {
+				if (Objects.nonNull(itemSub.getNotifyThreshold())) {
+					listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
+				}
+				if (CharSequenceUtil.isBlank(listing.getWorldName())) {
+					listing.setWorldName(worldName);
+				}
+				listing.setTotal(listing.getTotal() + listing.getTax());
+			});
+			return listings;
+		} else {
+			return new ArrayList<>();
 		}
 	}
 
