@@ -42,7 +42,7 @@ public class FF14PriceService {
 	private static final String UNIVERSAL_URI = "https://universalis.app/api/v2/{}/{}?listings=5&entries=20&noGst=1&hq={}";
 
 
-	@Resource
+	@Resource(name = "uniHttpReqExecutor")
 	private ThreadPoolExecutor threadPoolExecutor;
 
 	@Resource
@@ -162,7 +162,7 @@ public class FF14PriceService {
 			}
 		}
 	}
-	
+
 	private HttpResponse submitRequest(String url) {
 		return submitRequest(url, 3); // 默认重试3次
 	}
