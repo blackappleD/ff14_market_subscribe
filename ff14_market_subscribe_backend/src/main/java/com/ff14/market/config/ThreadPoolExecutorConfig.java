@@ -17,9 +17,9 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class ThreadPoolExecutorConfig {
 
-	@Bean
+	@Bean("uniHttpReqExecutor")
 	public ThreadPoolExecutor threadPoolExecutor() {
-		return new ThreadPoolExecutor(3, 3,
+		return new ThreadPoolExecutor(7, 7,
 				1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), new Sleep5sResubmitHandler());
 	}
 
