@@ -15,6 +15,7 @@ import com.ff14.market.po.FF14UserPO;
 import com.ff14.market.util.AdminUtil;
 import jakarta.annotation.Resource;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
  * @description: description
  * @date 2024/12/27 17:23
  */
+@Slf4j
 @Service
 public class FF14PriceService {
 
@@ -109,11 +111,14 @@ public class FF14PriceService {
 
 
 	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, FF14ItemSubPO> itemIdNameMap, String worldName, String hqUrl) {
-		Future<HttpResponse> submit = threadPoolExecutor.submit(() -> HttpUtil.createGet(hqUrl)
-				.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
-				.timeout(60000)
-				.execute());
+		Future<HttpResponse> submit = threadPoolExecutor.submit(() -> {
+			log.info("请求：{}", hqUrl);
+			return HttpUtil.createGet(hqUrl)
+					.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
+					.timeout(60000)
+					.execute();
 
+		});
 		HttpResponse response;
 		try {
 			response = submit.get();
@@ -150,11 +155,14 @@ public class FF14PriceService {
 
 		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), itemSub.getHq());
 
-		Future<HttpResponse> submit = threadPoolExecutor.submit(() -> HttpUtil.createGet(url)
-				.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
-				.timeout(60000)
-				.execute()
-		);
+		Future<HttpResponse> submit = threadPoolExecutor.submit(() -> {
+			log.info("请求：{}", url);
+			return HttpUtil.createGet(url)
+					.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
+					.timeout(60000)
+					.execute();
+
+		});
 		HttpResponse response;
 		try {
 			response = submit.get();
