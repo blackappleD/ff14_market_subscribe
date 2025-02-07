@@ -9,6 +9,7 @@ import cn.hutool.json.JSONUtil;
 import com.ff14.market.dto.ItemDTO;
 import com.ff14.market.dto.ItemPriceInfo;
 import com.ff14.market.dto.SubscribePriceGroup;
+import com.ff14.market.exception.FF14Exception;
 import com.ff14.market.po.FF14ItemSubPO;
 import com.ff14.market.po.FF14SubscribeGroupPO;
 import com.ff14.market.po.FF14UserPO;
@@ -22,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Function;
@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class FF14PriceService {
-
 
 	// 占位符： 大区 itemid
 	private static final String UNIVERSAL_URI = "https://universalis.app/api/v2/{}/{}?listings=5&entries=20&noGst=1&hq={}";
@@ -111,30 +110,43 @@ public class FF14PriceService {
 
 
 	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, FF14ItemSubPO> itemIdNameMap, String worldName, String hqUrl) {
-		Future<HttpResponse> submit = threadPoolExecutor.submit(() -> {
-			log.info("请求：{}", hqUrl);
-			return HttpUtil.createGet(hqUrl)
-					.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
-					.timeout(60000)
-					.execute();
+		try (HttpResponse response = submitRequest(hqUrl)) {
+			if (response.getStatus() == 200) {
 
-		});
-		HttpResponse response;
-		try {
-			response = submit.get();
-		} catch (InterruptedException | ExecutionException e) {
-			throw new RuntimeException(e);
+				String body = response.body();
+				Map<String, Listings> itemListingsMap = JSONUtil.toBean(body, BatchItemsPrice.class).getItems();
+				return itemListingsMap.entrySet().stream().map(entry -> {
+					SubscribePriceGroup.ItemPriceGroup itemPriceGroup = new SubscribePriceGroup.ItemPriceGroup();
+					itemPriceGroup.setId(Long.valueOf(entry.getKey()));
+					FF14ItemSubPO itemSub = itemIdNameMap.get(entry.getKey());
+					itemPriceGroup.setName(itemSub.getItem().getName());
+					List<ItemPriceInfo> listings = entry.getValue().getListings();
+					listings.forEach(listing -> {
+						if (Objects.nonNull(itemSub.getNotifyThreshold())) {
+							listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
+						}
+						if (CharSequenceUtil.isBlank(listing.getWorldName())) {
+							listing.setWorldName(worldName);
+						}
+						listing.setTotal(listing.getTotal() + listing.getTax());
+					});
+					itemPriceGroup.setItemPriceInfoList(listings);
+					return itemPriceGroup;
+				}).toList();
+			}
 		}
-		if (response.getStatus() == 200) {
+		return new ArrayList<>();
+	}
 
-			String body = response.body();
-			Map<String, Listings> itemListingsMap = JSONUtil.toBean(body, BatchItemsPrice.class).getItems();
-			return itemListingsMap.entrySet().stream().map(entry -> {
-				SubscribePriceGroup.ItemPriceGroup itemPriceGroup = new SubscribePriceGroup.ItemPriceGroup();
-				itemPriceGroup.setId(Long.valueOf(entry.getKey()));
-				FF14ItemSubPO itemSub = itemIdNameMap.get(entry.getKey());
-				itemPriceGroup.setName(itemSub.getItem().getName());
-				List<ItemPriceInfo> listings = entry.getValue().getListings();
+	public List<ItemPriceInfo> requestItemPriceInfo(FF14ItemSubPO itemSub, String worldName) {
+
+		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), itemSub.getHq());
+
+		try (HttpResponse response = submitRequest(url)) {
+
+			if (response.getStatus() == 200) {
+				String body = response.body();
+				List<ItemPriceInfo> listings = JSONUtil.toBean(body, Listings.class).getListings();
 				listings.forEach(listing -> {
 					if (Objects.nonNull(itemSub.getNotifyThreshold())) {
 						listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
@@ -144,46 +156,42 @@ public class FF14PriceService {
 					}
 					listing.setTotal(listing.getTotal() + listing.getTax());
 				});
-				itemPriceGroup.setItemPriceInfoList(listings);
-				return itemPriceGroup;
-			}).toList();
+				return listings;
+			} else {
+				return new ArrayList<>();
+			}
 		}
-		return new ArrayList<>();
+	}
+	
+	private HttpResponse submitRequest(String url) {
+		return submitRequest(url, 3); // 默认重试3次
 	}
 
-	public List<ItemPriceInfo> requestItemPriceInfo(FF14ItemSubPO itemSub, String worldName) {
-
-		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), itemSub.getHq());
-
-		Future<HttpResponse> submit = threadPoolExecutor.submit(() -> {
-			log.info("请求：{}", url);
-			return HttpUtil.createGet(url)
-					.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
-					.timeout(60000)
-					.execute();
-
-		});
-		HttpResponse response;
+	private HttpResponse submitRequest(String url, int retryTimes) {
 		try {
-			response = submit.get();
-		} catch (InterruptedException | ExecutionException e) {
-			throw new RuntimeException(e);
-		}
-		if (response.getStatus() == 200) {
-			String body = response.body();
-			List<ItemPriceInfo> listings = JSONUtil.toBean(body, Listings.class).getListings();
-			listings.forEach(listing -> {
-				if (Objects.nonNull(itemSub.getNotifyThreshold())) {
-					listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
-				}
-				if (CharSequenceUtil.isBlank(listing.getWorldName())) {
-					listing.setWorldName(worldName);
-				}
-				listing.setTotal(listing.getTotal() + listing.getTax());
+			Future<HttpResponse> submit = threadPoolExecutor.submit(() -> {
+				log.info("请求universalis api：{}", url);
+				return HttpUtil.createGet(url)
+						.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
+						.timeout(60000)
+						.execute();
 			});
-			return listings;
-		} else {
-			return new ArrayList<>();
+			return submit.get();
+		} catch (Exception e) {
+			if (retryTimes > 0) {
+				try {
+					log.warn("请求universalis api异常:{}，剩余重试次数{}，准备重新调用！", e.getMessage(), retryTimes);
+					// 指数退避策略，每次增加等待时间
+					Thread.sleep(500L * (4 - retryTimes));
+				} catch (InterruptedException ex) {
+					Thread.currentThread().interrupt(); // 保持中断状态
+					throw new FF14Exception("请求被中断");
+				}
+				return submitRequest(url, retryTimes - 1);
+			} else {
+				log.error("调用universalis api达到最大重试次数，最终失败");
+				throw new FF14Exception("调用universalis api异常", e);
+			}
 		}
 	}
 
