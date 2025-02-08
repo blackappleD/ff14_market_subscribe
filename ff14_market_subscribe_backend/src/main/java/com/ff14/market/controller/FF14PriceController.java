@@ -1,12 +1,11 @@
 package com.ff14.market.controller;
 
 import com.ff14.market.annotations.FF14ResponseBody;
+import com.ff14.market.dto.ItemPriceInfo;
 import com.ff14.market.dto.SubscribePriceGroup;
 import com.ff14.market.service.FF14PriceService;
 import jakarta.annotation.Resource;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -27,6 +26,13 @@ public class FF14PriceController {
 	@GetMapping("/on_time")
 	public List<SubscribePriceGroup> subscribeItemPriceOnTime() {
 		return ff14PriceService.subscribeItemPriceOnTime();
+	}
+
+	@GetMapping("/on_time/{worldName}/{itemId}")
+	public List<ItemPriceInfo> requestItemPriceInfo(@PathVariable String worldName,
+	                                                @PathVariable Integer itemId,
+	                                                @RequestParam(defaultValue = "false") Boolean hq) {
+		return ff14PriceService.requestItemPriceInfo(worldName, itemId, hq);
 	}
 
 

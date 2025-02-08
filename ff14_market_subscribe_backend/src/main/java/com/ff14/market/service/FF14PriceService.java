@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 public class FF14PriceService {
 
 	// 占位符： 大区 itemid
-	private static final String UNIVERSAL_URI = "https://universalis.app/api/v2/{}/{}?listings=5&entries=20&noGst=1&hq={}";
+	private static final String UNIVERSAL_URI = "https://universalis.app/api/v2/{}/{}?listings={}&entries=20&noGst=1&hq={}";
 
 
 	@Resource(name = "uniHttpReqExecutor")
@@ -47,6 +47,13 @@ public class FF14PriceService {
 
 	@Resource
 	private FF14SubscribeGroupService ff14SubscribeGroupService;
+
+	public List<ItemPriceInfo> requestItemPriceInfo(String worldName,
+	                                                Integer itemId,
+	                                                Boolean hq) {
+		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemId, 50, hq);
+		return requestItemPriceInfo(url, worldName, null);
+	}
 
 	public List<SubscribePriceGroup> subscribeItemPriceOnTime() {
 		return subscribeItemPrice(AdminUtil.getCurrentUser());
@@ -86,7 +93,7 @@ public class FF14PriceService {
 					.filter(FF14ItemSubPO::getHq)
 					.map(itemSub -> String.valueOf(itemSub.getItem().getId()))
 					.collect(Collectors.joining(","));
-			String hqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, hqItemIdStr, true);
+			String hqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, hqItemIdStr, 5, true);
 			list.addAll(request(itemIdNameMap, worldName, hqUrl));
 		}
 		if (notHqItemSubs.size() == 1) {
@@ -101,7 +108,7 @@ public class FF14PriceService {
 					.map(itemSub -> String.valueOf(itemSub.getItem().getId()))
 					.collect(Collectors.joining(","));
 
-			String nqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, notHqItemIdStr, "");
+			String nqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, notHqItemIdStr, 5, "");
 			list.addAll(request(itemIdNameMap, worldName, nqUrl));
 		}
 		return list;
@@ -140,16 +147,18 @@ public class FF14PriceService {
 
 	public List<ItemPriceInfo> requestItemPriceInfo(FF14ItemSubPO itemSub, String worldName) {
 
-		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), itemSub.getHq());
+		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), 5, itemSub.getHq());
+		return requestItemPriceInfo(url, worldName, itemSub.getNotifyThreshold());
+	}
 
+	private List<ItemPriceInfo> requestItemPriceInfo(String url, String worldName, Long notifyThreshold) {
 		try (HttpResponse response = submitRequest(url)) {
-
 			if (response.getStatus() == 200) {
 				String body = response.body();
 				List<ItemPriceInfo> listings = JSONUtil.toBean(body, Listings.class).getListings();
 				listings.forEach(listing -> {
-					if (Objects.nonNull(itemSub.getNotifyThreshold())) {
-						listing.setLowerThreshold(listing.getPricePerUnit() <= itemSub.getNotifyThreshold());
+					if (Objects.nonNull(notifyThreshold)) {
+						listing.setLowerThreshold(listing.getPricePerUnit() <= notifyThreshold);
 					}
 					if (CharSequenceUtil.isBlank(listing.getWorldName())) {
 						listing.setWorldName(worldName);
