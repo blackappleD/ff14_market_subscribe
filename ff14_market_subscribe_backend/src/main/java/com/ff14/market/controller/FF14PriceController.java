@@ -30,10 +30,9 @@ public class FF14PriceController {
 
 	@GetMapping("/on_time/{worldName}/{itemId}")
 	public List<ItemPriceInfo> requestItemPriceInfo(@PathVariable String worldName,
-	                                                @PathVariable Integer itemId,
-	                                                @RequestParam(defaultValue = "false") Boolean hq) {
+			@PathVariable Integer itemId,
+			@RequestParam(defaultValue = "false") Boolean hq) {
 		return ff14PriceService.requestItemPriceInfo(worldName, itemId, hq);
 	}
-
 
 }

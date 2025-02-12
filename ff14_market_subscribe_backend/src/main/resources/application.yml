@@ -37,3 +37,6 @@ auth:
     expire: 43200000
 cache:
   mode: caffeine
+
+cursor:
+  expire-days: 30
