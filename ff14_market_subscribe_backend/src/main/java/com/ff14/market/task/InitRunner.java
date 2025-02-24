@@ -9,6 +9,7 @@ import com.ff14.market.repo.FF14WorldRepo;
 import jakarta.annotation.Resource;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Configuration;
@@ -37,6 +38,9 @@ public class InitRunner implements ApplicationRunner {
 
 	@Resource
 	private ResourceLoader resourceLoader;
+
+	@Value("${item.force-update:false}")
+	private boolean itemUpdate;
 
 	@Override
 	public void run(ApplicationArguments args) {
@@ -108,7 +112,7 @@ public class InitRunner implements ApplicationRunner {
 
 
 	public void initItemData() throws IOException {
-		if (ff14ItemRepo.findById(1L).isPresent()) {
+		if (ff14ItemRepo.findById(1L).isPresent() && !itemUpdate) {
 			return;
 		}
 

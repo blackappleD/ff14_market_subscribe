@@ -40,3 +40,5 @@ cache:
 
 cursor:
   expire-days: 30
+item:
+  force-update: true
