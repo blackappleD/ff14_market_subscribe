@@ -16,6 +16,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
 
 springdoc:
   default-produces-media-type: application/json
@@ -24,7 +29,6 @@ springdoc:
   swagger-ui:
     tags-sorter: alpha
     operations-sorter: alpha
-
 mail:
   smtp:
     host: smtp.163.com
@@ -41,4 +45,4 @@ cache:
 cursor:
   expire-days: 30
 item:
-  force-update: true
+  force-update: false
