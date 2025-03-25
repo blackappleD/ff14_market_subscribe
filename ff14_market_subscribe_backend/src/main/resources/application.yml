@@ -1,7 +1,6 @@
-server:
-  port: 18888
-
 spring:
+  profiles:
+    active:
   application:
     name: ff14-market-subscribe
   datasource:
@@ -36,6 +35,7 @@ mail:
     mail-from: aChen1996kkxx@163.com
     password: FWS3Y37CKuDSE7fG
 auth:
+  verify: true
   jwt:
     enable: true
     expire: 43200000

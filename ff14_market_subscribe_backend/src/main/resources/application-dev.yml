@@ -1,0 +1,4 @@
+server:
+  port: 18887
+auth:
+  verify: false

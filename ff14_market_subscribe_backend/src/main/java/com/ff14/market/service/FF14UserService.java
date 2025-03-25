@@ -10,7 +10,10 @@ import com.ff14.market.mapper.FF14UserMapper;
 import com.ff14.market.po.FF14UserPO;
 import com.ff14.market.repo.FF14UserRepo;
 import com.ff14.market.util.AuthUtil;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +29,9 @@ import java.util.Optional;
  */
 @Service
 public class FF14UserService {
+
+	@Value("${auth.verify:true}")
+	private boolean verify;
 
 	@Resource
 	private FF14UserRepo ff14UserRepo;
@@ -60,7 +66,7 @@ public class FF14UserService {
 
 		FF14UserPO user = userOpt.get();
 
-		if (!BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
+		if (verify && !BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
 			throw FF14Exception.UserException.passwordError();
 		}
 		user.setLastLoginTime(LocalDateTime.now());
