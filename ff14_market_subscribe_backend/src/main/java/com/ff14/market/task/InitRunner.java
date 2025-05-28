@@ -1,5 +1,6 @@
 package com.ff14.market.task;
 
+import cn.hutool.core.text.csv.*;
 import cn.hutool.json.JSONUtil;
 import com.ff14.market.enums.WorldLevel;
 import com.ff14.market.po.FF14ItemPO;
@@ -16,9 +17,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ResourceLoader;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import cn.hutool.core.util.CharsetUtil;
 
 /**
  * @author chentong
@@ -115,51 +119,60 @@ public class InitRunner implements ApplicationRunner {
 		if (ff14ItemRepo.findById(1L).isPresent() && !itemUpdate) {
 			return;
 		}
-
-		String json = resourceLoader.getResource("classpath:init/ff14itemsresponse.json").getContentAsString(StandardCharsets.UTF_8);
-
-		Response bean = JSONUtil.toBean(json, Response.class);
-
-		List<FF14ItemPO> poList = bean.getRows().stream().map(originalItem -> {
+	
+		// 创建CSV读取配置
+		CsvReadConfig csvReadConfig = new CsvReadConfig();
+		// 设置跳过前4行header（第5行开始才是实际数据）
+		csvReadConfig.setBeginLineNo(4);
+		// 不将第一行作为标题行
+		csvReadConfig.setContainsHeader(false);
+	
+		// 使用CsvUtil读取CSV文件
+		CsvReader reader = CsvUtil.getReader(csvReadConfig);
+		
+		// 将InputStream转换为Reader对象
+		InputStreamReader inputStreamReader = new InputStreamReader(
+			resourceLoader.getResource("classpath:init/Item.csv").getInputStream(),
+			CharsetUtil.CHARSET_UTF_8
+		);
+		
+		// 读取CSV文件为CsvData
+		CsvData csvData = reader.read(inputStreamReader);
+		
+		// 获取所有行
+		List<CsvRow> rows = csvData.getRows();
+		
+		// 将CsvRow转换为FF14ItemPO
+		List<FF14ItemPO> poList = rows.stream().map(row -> {
+			List<String> rawList = row.getRawList();
 			FF14ItemPO item = new FF14ItemPO();
-			item.setId(originalItem.getId());
-			item.setName(originalItem.getName());
+			if (!rawList.isEmpty()) {
+				// 第一列是key（#），对应FF14ItemPO的id
+				String keyStr = rawList.get(0);
+				if (keyStr != null && !keyStr.isEmpty()) {
+					item.setId(Long.parseLong(keyStr));
+				}
+				
+				// 第八列是Name，对应FF14ItemPO的name
+				if (rawList.size() > 1) {
+					String nameStr = rawList.get(1);
+					if (nameStr != null) {
+						item.setName(nameStr);
+					}
+				}
+			}
 			return item;
-		}).collect(Collectors.toList());
-
+		}).filter(item -> item.getId() != null && item.getName() != null)
+		  .collect(Collectors.toList());
+	
 		ff14ItemRepo.saveAll(poList);
-		log.info("初始化items数据完成");
+		log.info("初始化items数据完成，共加载{}条数据", poList.size());
 	}
 
 	@Data
-	public static class Response {
-		private List<OriginalItem> rows;
-
-	}
-
-	@Data
-	public static class OriginalItem {
-		private boolean isIndisposable;
-		private boolean canBeHq;
-		private boolean preview;
-		private long gatherCount;
-		private String itemType;
-		private boolean isCrestWorthy;
-		private long levelEquip;
-		private boolean isUnique;
-		private boolean craft;
-		private String description;
-		private long guYuan;
-		private long levelItem;
-		private long stackSize;
-		private boolean isDyeable;
-		private String name;
-		private boolean isUntradable;
-		private long recipeCount;
-		private long id;
-		private String job;
-		private boolean npcTrade;
-		private long classJobUse;
+	public static class CsvItem {
+		private String key;
+		private String str;
 	}
 
 }
