@@ -14,7 +14,7 @@ module.exports = defineConfig({
     });
   },
   devServer: {
-    port: 3000,
+    port: 13000,
     historyApiFallback: {
       rewrites: [
         { from: /./, to: '/index.html' }

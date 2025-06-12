@@ -20,7 +20,7 @@ public class CorsFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) req;
 
         String origin = request.getHeader("Origin");
-        if (origin != null && (origin.equals("http://localhost:3000") ||
+        if (origin != null && (origin.equals("http://localhost:13000") ||
                 origin.equals("http://localhost:3002") ||
                 origin.equals("https://pangkazhuzhu.top:32323") ||
                 origin.equals("https://192.168.1.77:32323"))) {
