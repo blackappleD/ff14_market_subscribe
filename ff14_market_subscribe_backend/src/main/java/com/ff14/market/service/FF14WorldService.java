@@ -34,6 +34,12 @@ public class FF14WorldService {
 				.collect(Collectors.toList());
 	}
 
+	public List<WorldDTO> getAllWorlds() {
+		return ff14WorldRepo.findAll().stream()
+				.map(ff14WorldMapper::po2dto)
+				.collect(Collectors.toList());
+	}
+
 	public FF14WorldPO findById(Long id) {
 		return ff14WorldRepo.findById(id).orElseThrow(FF14Exception.WorldException::notFound);
 	}

@@ -5,7 +5,9 @@ import com.ff14.market.dto.UserSubscribeGroupReqDTO;
 import com.ff14.market.mapper.FF14SubscribeGroupMapper;
 import com.ff14.market.po.FF14SubscribeGroupPO;
 import com.ff14.market.po.FF14UserPO;
+import com.ff14.market.po.FF14WorldPO;
 import com.ff14.market.repo.FF14UserSubscribeRepo;
+import com.ff14.market.repo.FF14WorldRepo;
 import com.ff14.market.util.AdminUtil;
 import com.ff14.market.util.AuthUtil;
 import jakarta.annotation.Resource;
@@ -28,6 +30,8 @@ public class FF14SubscribeGroupService {
 
 	@Resource
 	private FF14UserSubscribeRepo ff14UserSubscribeRepo;
+	@Resource
+	private FF14WorldRepo ff14WorldRepo;
 
 	@Resource
 	private FF14UserService ff14UserService;
@@ -66,10 +70,19 @@ public class FF14SubscribeGroupService {
 				po = ff14SubscribeGroupMapper.reqDto2po(dto);
 				po.setUser(currentUser);
 			}
+			FF14WorldPO world = ff14WorldRepo.findById(dto.getWorld().getId()).orElse(null);
+			po.setWorld(world);
 			ff14UserSubscribeRepo.save(po);
 
 		});
 
+	}
+
+	public void updateWorld(Long groupId, Long worldId) {
+		FF14SubscribeGroupPO group = ff14UserSubscribeRepo.findById(groupId).orElseThrow();
+		FF14WorldPO world = ff14WorldRepo.findById(worldId).orElseThrow();
+		group.setWorld(world);
+		ff14UserSubscribeRepo.save(group);
 	}
 
 	public List<FF14SubscribeGroupPO> findByUser(FF14UserPO user) {

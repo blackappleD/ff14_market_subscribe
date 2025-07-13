@@ -9,10 +9,13 @@ import cn.hutool.json.JSONUtil;
 import com.ff14.market.dto.ItemDTO;
 import com.ff14.market.dto.ItemPriceInfo;
 import com.ff14.market.dto.SubscribePriceGroup;
+import com.ff14.market.dto.WorldDTO;
 import com.ff14.market.exception.FF14Exception;
+import com.ff14.market.mapper.FF14WorldMapper;
 import com.ff14.market.po.FF14ItemSubPO;
 import com.ff14.market.po.FF14SubscribeGroupPO;
 import com.ff14.market.po.FF14UserPO;
+import com.ff14.market.repo.FF14UserSubscribeRepo;
 import com.ff14.market.util.AdminUtil;
 import jakarta.annotation.Resource;
 import lombok.Data;
@@ -41,16 +44,21 @@ public class FF14PriceService {
 	// 占位符： 大区 itemid
 	private static final String UNIVERSAL_URI = "https://universalis.app/api/v2/{}/{}?listings={}&entries=20&noGst=1&hq={}";
 
-
 	@Resource(name = "uniHttpReqExecutor")
 	private ThreadPoolExecutor threadPoolExecutor;
 
 	@Resource
 	private FF14SubscribeGroupService ff14SubscribeGroupService;
 
+	@Resource
+	private FF14UserSubscribeRepo ff14UserSubscribeRepo;
+
+	@Resource
+	private FF14WorldMapper ff14WorldMapper;
+
 	public List<ItemPriceInfo> requestItemPriceInfo(String worldName,
-	                                                Integer itemId,
-	                                                Boolean hq) {
+			Integer itemId,
+			Boolean hq) {
 		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemId, 50, hq);
 		return requestItemPriceInfo(url, worldName, null);
 	}
@@ -60,12 +68,24 @@ public class FF14PriceService {
 
 	}
 
+	public SubscribePriceGroup subscribeItemPriceByGroup(Long groupId) {
+		FF14SubscribeGroupPO userSubscribe = ff14UserSubscribeRepo.findById(groupId).orElseThrow();
+		SubscribePriceGroup data = new SubscribePriceGroup();
+		data.setId(userSubscribe.getId());
+		WorldDTO worldDTO = ff14WorldMapper.po2dto(userSubscribe.getWorld());
+		data.setWorld(worldDTO);
+		data.setWorldName(userSubscribe.getWorld().getName());
+		data.setItemPriceGroups(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName()));
+		return data;
+	}
+
 	public List<SubscribePriceGroup> subscribeItemPrice(FF14UserPO user) {
 		List<FF14SubscribeGroupPO> userSubscribeList = ff14SubscribeGroupService.findByUser(user);
 
 		return userSubscribeList.stream().map(userSubscribe -> {
 			SubscribePriceGroup data = new SubscribePriceGroup();
 			data.setId(userSubscribe.getId());
+			data.setWorld(ff14WorldMapper.po2dto(userSubscribe.getWorld()));
 			data.setWorldName(userSubscribe.getWorld().getName());
 			data.setItemPriceGroups(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName()));
 			return data;

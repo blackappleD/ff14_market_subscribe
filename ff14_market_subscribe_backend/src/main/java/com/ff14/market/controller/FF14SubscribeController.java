@@ -34,5 +34,9 @@ public class FF14SubscribeController {
 		ff14SubscribeGroupService.modify(dto);
 	}
 
+	@PutMapping("/{groupId}/world/{worldId}")
+	public void updateWorld(@PathVariable Long groupId, @PathVariable Long worldId) {
+		ff14SubscribeGroupService.updateWorld(groupId, worldId);
+	}
 
 }

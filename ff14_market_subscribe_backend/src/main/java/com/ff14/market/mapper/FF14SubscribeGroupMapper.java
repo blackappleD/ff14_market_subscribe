@@ -20,7 +20,8 @@ public interface FF14SubscribeGroupMapper {
 
 	FF14SubscribeGroupPO reqDto2po(UserSubscribeGroupReqDTO dto);
 
-	@Mapping(target = "po.id", ignore = true)
+	@Mapping(target = "id", ignore = true)
+	@Mapping(target = "world", ignore = true)
 	void reqDto2po(UserSubscribeGroupReqDTO dto, @MappingTarget FF14SubscribeGroupPO po);
 
 }

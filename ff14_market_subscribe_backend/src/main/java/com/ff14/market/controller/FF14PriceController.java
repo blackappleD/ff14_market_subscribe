@@ -28,6 +28,11 @@ public class FF14PriceController {
 		return ff14PriceService.subscribeItemPriceOnTime();
 	}
 
+	@GetMapping("/on_time/{groupId}")
+	public SubscribePriceGroup subscribeItemPriceByGroup(@PathVariable Long groupId) {
+		return ff14PriceService.subscribeItemPriceByGroup(groupId);
+	}
+
 	@GetMapping("/on_time/{worldName}/{itemId}")
 	public List<ItemPriceInfo> requestItemPriceInfo(@PathVariable String worldName,
 			@PathVariable Integer itemId,

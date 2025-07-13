@@ -27,11 +27,28 @@
                 数据加载中，请稍后...
             </div>
 
-            <!-- 订阅实时价格分组展示 -->
+            <!-- 订阅实时价格分组展示 (MODIFIED) -->
             <template v-else>
                 <div v-if="hasSubscriptions">
-                    <div v-for="subscribeGroup in priceData" :key="subscribeGroup.id" class="subscribe-group">
-                        <h3 class="subescribe-world-title">{{ subscribeGroup.worldName }}</h3>
+                    <div v-for="(subscribeGroup, groupIndex) in priceData" :key="subscribeGroup.id"
+                        class="subscribe-group">
+                        <div class="group-header">
+                            <div class="world-selector">
+                                <input v-model="subscribeGroup.worldSearchText" class="world-input"
+                                    :placeholder="subscribeGroup.worldName" @input="searchWorlds(groupIndex)"
+                                    @focus="showWorldDropdown(groupIndex)" @blur="hideDropdown(groupIndex)">
+                                <div v-if="subscribeGroup.showWorldDropdown && subscribeGroup.worldResults.length"
+                                    class="dropdown-menu">
+                                    <div v-for="world in subscribeGroup.worldResults" :key="world.id"
+                                        class="dropdown-item" @mousedown="selectWorld(groupIndex, world)">
+                                        {{ world.name }}
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="action-button" @click="refreshGroup(subscribeGroup.id)">
+                                刷新物价
+                            </button>
+                        </div>
                         <table class="price-table">
                             <thead>
                                 <tr>
@@ -49,7 +66,8 @@
                             <tbody>
                                 <template v-for="item in subscribeGroup.itemPriceGroups" :key="item.id">
                                     <!-- 主行（默认显示第一条价格信息） -->
-                                    <tr class="main-row">
+                                    <tr class="main-row"
+                                        v-if="item.itemPriceInfoList && item.itemPriceInfoList.length > 0">
                                         <td>
                                             <div class="item-name-cell">
                                                 <button class="collapse-button"
@@ -106,9 +124,27 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted } from 'vue';
+import { defineComponent, ref, onMounted, onUnmounted, computed } from 'vue';
 import axios from '@/utils/axios';
 import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { useStore } from 'vuex';
+import { World } from '@/store/modules/world';
+
+// Debounce function from Subscribe.vue
+function debounce<T extends (...args: any[]) => any>(
+    fn: T,
+    delay: number
+): (...args: Parameters<T>) => void {
+    let timeoutId: number;
+    return (...args: Parameters<T>) => {
+        if (timeoutId) {
+            window.clearTimeout(timeoutId);
+        }
+        timeoutId = window.setTimeout(() => fn(...args), delay);
+    };
+}
+
 
 interface PriceInfo {
     pricePerUnit: number;
@@ -128,10 +164,16 @@ interface ItemPriceGroup {
     itemPriceInfoList: PriceInfo[];
 }
 
+// MODIFIED
 interface subscribePriceGroup {
     id: number;
     worldName: string;
+    worldId: string; // Corrected: from number to string
     itemPriceGroups: ItemPriceGroup[];
+    // New properties for search
+    worldSearchText: string;
+    showWorldDropdown: boolean;
+    worldResults: World[];
 }
 
 const COOLDOWN_KEY = 'price_refresh_cooldown';
@@ -139,7 +181,11 @@ const LAST_UPDATE_KEY = 'price_last_update';
 
 export default defineComponent({
     name: 'RealTimePrice',
+    components: {
+        // Removed ElSelect, ElOption
+    },
     setup() {
+        const store = useStore();
         const router = useRouter();
         const priceData = ref<subscribePriceGroup[]>([]);
         const loading = ref(false);
@@ -150,7 +196,182 @@ export default defineComponent({
         let cooldownTimer: number | null = null;
         const expandedItems = ref(new Set<string>());
 
-        // 检查是否在冷却时间内
+        // Get all worlds from Vuex store
+        const allWorlds = computed(() => store.getters['world/getWorlds']);
+
+        // This function now filters the local `worlds` ref
+        const searchWorlds = (groupIndex: number) => {
+            const group = priceData.value[groupIndex];
+            if (!group.worldSearchText) {
+                group.worldResults = allWorlds.value; // Show all if input is empty
+            } else {
+                group.worldResults = allWorlds.value.filter((world: World) =>
+                    world.name.toLowerCase().includes(group.worldSearchText.toLowerCase())
+                );
+            }
+        };
+
+        // Debounced auto-save function (no change to this)
+        const debouncedSaveWorld = debounce(async (groupId: number, worldId: string) => {
+            try {
+                await axios.put(`/ff14/subscribe/${groupId}/world/${worldId}`);
+                ElMessage.success('世界已自动保存，正在刷新价格...');
+                await refreshGroup(groupId);
+            } catch (error: any) {
+                console.error('自动保存世界失败:', error);
+                ElMessage.error(error.response?.data?.message || '自动保存世界失败');
+            }
+        }, 1000);
+
+        const selectWorld = (groupIndex: number, world: World) => {
+            const group = priceData.value[groupIndex];
+            group.worldId = world.id;
+            group.worldSearchText = world.name; // Update input text before hiding
+            group.showWorldDropdown = false;
+            // Now, we save. The save function will trigger the refresh.
+            debouncedSaveWorld(group.id, world.id);
+        };
+
+        const refreshGroup = async (groupId: number) => {
+            try {
+                const response = await axios.get(`/ff14/price/on_time/${groupId}`);
+                const updatedGroupData = response.data.data; // Corrected: access response.data.data
+                const index = priceData.value.findIndex(g => g.id === groupId);
+
+                if (index !== -1 && updatedGroupData) {
+                    // Preserve UI state from the old group
+                    const oldGroup = priceData.value[index];
+                    const newGroup = {
+                        ...updatedGroupData,
+                        worldId: updatedGroupData.world.id,
+                        worldName: updatedGroupData.world.name,
+                        worldSearchText: oldGroup.worldSearchText,
+                        showWorldDropdown: oldGroup.showWorldDropdown,
+                        worldResults: oldGroup.worldResults,
+                    };
+                    priceData.value[index] = newGroup;
+
+                    ElMessage.success(`分组 ${newGroup.worldName} 的价格已刷新`);
+                } else if (!updatedGroupData) {
+                     ElMessage.error('刷新失败，未获取到分组数据');
+                }
+
+            } catch (error: any) {
+                console.error('刷新分组价格失败:', error);
+                ElMessage.error(error.response?.data?.message || '刷新分组价格失败');
+            }
+        };
+
+        const showWorldDropdown = (groupIndex: number) => {
+            const group = priceData.value[groupIndex];
+            // Populate dropdown with filtered results on focus
+            searchWorlds(groupIndex); 
+            group.showWorldDropdown = true;
+        };
+
+        const hideDropdown = (groupIndex: number) => {
+            // Delay hiding to allow click event to register
+            setTimeout(() => {
+                if (priceData.value[groupIndex]) {
+                    priceData.value[groupIndex].showWorldDropdown = false;
+                }
+            }, 200);
+        };
+
+
+        const fetchPriceData = async () => {
+            if (loading.value || cooldownTime.value > 0) return;
+            try {
+                loading.value = true;
+                const response = await axios.get('/ff14/price/on_time', { timeout: 120000 });
+                priceData.value = response.data.data.map((group: any) => ({
+                    ...group,
+                    // Safely access world properties using optional chaining
+                    worldId: group.world?.id,
+                    worldName: group.world?.name || group.worldName, // Fallback to the existing worldName
+                    worldSearchText: group.world?.name || group.worldName, 
+                    showWorldDropdown: false,
+                    worldResults: [],
+                }));
+                lastUpdateTime.value = new Date();
+                localStorage.setItem('price_data', JSON.stringify(priceData.value));
+                updateCooldownStorage();
+                startCooldown();
+            } catch (error: any) {
+                // ... error handling
+                console.error('获取价格数据失败:', error);
+                if (error.response?.status === 401) {
+                    router.push('/login');
+                } else {
+                    if (error.code === 'ECONNABORTED') {
+                        alert('请求超时，数据加载较慢，请稍后重试');
+                    } else {
+                        alert(error.response?.data?.message || error.response?.data?.data || '获取数据失败，请重试');
+                    }
+                }
+            } finally {
+                loading.value = false;
+            }
+        };
+
+        const checkSubscriptions = async () => {
+            try {
+                const response = await axios.get('/ff14/subscribe');
+                hasSubscriptions.value = response.data.data && response.data.data.length > 0;
+                if (hasSubscriptions.value) {
+                    if (!checkCooldown()) {
+                        await fetchPriceData();
+                    } else {
+                        // ...
+                        const cachedData = localStorage.getItem('price_data');
+                        if (cachedData) {
+                            priceData.value = JSON.parse(cachedData);
+                            const savedLastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
+                            if (savedLastUpdate) {
+                                lastUpdateTime.value = new Date(parseInt(savedLastUpdate));
+                            }
+                        }
+                    }
+                }
+            } catch (error: any) {
+                //...
+                console.error('检查订阅失败:', error);
+                if (error.response?.status === 401) {
+                    router.push('/login');
+                } else {
+                    alert(error.response?.data?.message || error.response?.data?.data || '检查订阅状态失败，请重试');
+                }
+            } finally {
+                isLoading.value = false;
+            }
+        };
+        
+        onMounted(async () => {
+            await store.dispatch('world/fetchWorlds'); // Fetch worlds via Vuex
+            await checkSubscriptions();
+        });
+        
+        // ... other methods like startCooldown, updateCooldownStorage, formatPrice, etc. remain
+        // ... but I'll paste them for completeness
+         const startCooldown = () => {
+            cooldownTime.value = cooldownTime.value || 120;
+            if (cooldownTimer) {
+                clearInterval(cooldownTimer);
+            }
+            cooldownTimer = window.setInterval(() => {
+                if (cooldownTime.value > 0) {
+                    cooldownTime.value--;
+                    if (cooldownTime.value === 0) {
+                        localStorage.removeItem(COOLDOWN_KEY);
+                        localStorage.removeItem(LAST_UPDATE_KEY);
+                    }
+                } else if (cooldownTimer) {
+                    clearInterval(cooldownTimer);
+                    cooldownTimer = null;
+                }
+            }, 1000);
+        };
+
         const checkCooldown = (): boolean => {
             const savedCooldown = localStorage.getItem(COOLDOWN_KEY);
             const savedLastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
@@ -169,98 +390,10 @@ export default defineComponent({
             return false;
         };
 
-        // 更新冷却时间存储
         const updateCooldownStorage = () => {
             localStorage.setItem(COOLDOWN_KEY, 'true');
             localStorage.setItem(LAST_UPDATE_KEY, Date.now().toString());
         };
-
-        // 检查是否有订阅数据
-        const checkSubscriptions = async () => {
-            try {
-                const response = await axios.get('/ff14/subscribe');
-                hasSubscriptions.value = response.data.data && response.data.data.length > 0;
-                if (hasSubscriptions.value) {
-                    if (!checkCooldown()) {
-                        await fetchPriceData();
-                    } else {
-                        // 如果在冷却时间内，尝试从缓存加载数据
-                        const cachedData = localStorage.getItem('price_data');
-                        if (cachedData) {
-                            priceData.value = JSON.parse(cachedData);
-                            const savedLastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
-                            if (savedLastUpdate) {
-                                lastUpdateTime.value = new Date(parseInt(savedLastUpdate));
-                            }
-                        }
-                    }
-                }
-            } catch (error: any) {
-                console.error('检查订阅失败:', error);
-                if (error.response?.status === 401) {
-                    router.push('/login');
-                } else {
-                    alert(error.response?.data?.message || error.response?.data?.data || '检查订阅状态失败，请重试');
-                }
-            } finally {
-                isLoading.value = false;
-            }
-        };
-
-        // 开始倒计时
-        const startCooldown = () => {
-            cooldownTime.value = cooldownTime.value || 120;
-            if (cooldownTimer) {
-                clearInterval(cooldownTimer);
-            }
-            cooldownTimer = window.setInterval(() => {
-                if (cooldownTime.value > 0) {
-                    cooldownTime.value--;
-                    // 同步更新 localStorage 中的时间
-                    if (cooldownTime.value === 0) {
-                        localStorage.removeItem(COOLDOWN_KEY);
-                        localStorage.removeItem(LAST_UPDATE_KEY);
-                    }
-                } else if (cooldownTimer) {
-                    clearInterval(cooldownTimer);
-                    cooldownTimer = null;
-                }
-            }, 1000);
-        };
-
-        const fetchPriceData = async () => {
-            if (loading.value || cooldownTime.value > 0) return;
-            try {
-                loading.value = true;
-                // 增加超时时间为 60 秒，等待接口较长时间响应
-                const response = await axios.get('/ff14/price/on_time', { timeout: 120000 });
-                priceData.value = response.data.data;
-                lastUpdateTime.value = new Date();
-                
-                // 缓存数据
-                localStorage.setItem('price_data', JSON.stringify(response.data.data));
-                updateCooldownStorage();
-                startCooldown();
-            } catch (error: any) {
-                console.error('获取价格数据失败:', error);
-                if (error.response?.status === 401) {
-                    router.push('/login');
-                } else {
-                    // 对超时错误进行额外判断
-                    if (error.code === 'ECONNABORTED') {
-                        alert('请求超时，数据加载较慢，请稍后重试');
-                    } else {
-                        alert(error.response?.data?.message || error.response?.data?.data || '获取数据失败，请重试');
-                    }
-                }
-            } finally {
-                loading.value = false;
-            }
-        };
-
-        onMounted(() => {
-            checkSubscriptions();
-        });
 
         onUnmounted(() => {
             if (cooldownTimer) {
@@ -268,8 +401,8 @@ export default defineComponent({
             }
         });
 
-        const formatPrice = (price: number): string => {
-            return price.toLocaleString();
+        const formatPrice = (price: number | null | undefined): string => {
+            return price?.toLocaleString() || '0';
         };
 
         const formatTime = (date: Date): string => {
@@ -289,6 +422,7 @@ export default defineComponent({
             return expandedItems.value.has(`${subGroupId}-${itemId}`);
         };
 
+
         return {
             priceData,
             loading,
@@ -296,11 +430,18 @@ export default defineComponent({
             hasSubscriptions,
             lastUpdateTime,
             cooldownTime,
-            fetchPriceData,
-            formatPrice,
-            formatTime,
+            expandedItems,
             toggleItemPrices,
             isExpanded,
+            fetchPriceData,
+            formatTime,
+            formatPrice,
+            refreshGroup,
+            // new methods
+            searchWorlds,
+            selectWorld,
+            showWorldDropdown,
+            hideDropdown
         };
     }
 });
@@ -352,18 +493,75 @@ export default defineComponent({
 
 .subscribe-group {
     margin-bottom: 30px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
 }
 
-.subescribe-world-title {
-    padding: 15px 20px;
-    background: #f5f5f5;
-    margin: 0;
-    font-size: 18px;
-    color: #333;
+.group-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 10px;
+}
+
+/* MODIFIED */
+.world-selector {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.world-input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 14px;
+    width: 150px;
+    transition: border-color 0.2s;
+}
+
+.world-input:focus {
+    outline: none;
+    border-color: #4285f4;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.dropdown-item {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.dropdown-item:hover {
+    background-color: #f0f0f0;
+}
+
+
+.action-button {
+    height: 32px; /* Match input height */
+    padding: 0 15px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    flex-shrink: 0;
+}
+
+.action-button:hover {
+    background-color: #e0e0e0;
 }
 
 .price-table {
@@ -389,7 +587,8 @@ export default defineComponent({
     font-weight: 500;
 }
 
-.no-data {
+.no-data,
+.loading-state {
     text-align: center;
     padding: 40px;
     color: #666;
@@ -425,15 +624,6 @@ export default defineComponent({
 .last-update {
     color: #666;
     font-size: 14px;
-}
-
-.loading-state {
-    text-align: center;
-    padding: 40px;
-    color: #666;
-    background: #f9f9f9;
-    border-radius: 8px;
-    margin-bottom: 20px;
 }
 
 .subscribe-link {

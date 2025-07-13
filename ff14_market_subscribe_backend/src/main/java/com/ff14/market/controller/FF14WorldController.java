@@ -19,6 +19,11 @@ public class FF14WorldController {
 	@Resource
 	private FF14WorldService ff14WorldService;
 
+	@GetMapping
+	public List<WorldDTO> getAllWorlds() {
+		return ff14WorldService.getAllWorlds();
+	}
+
 	@GetMapping("/search")
 	public List<WorldDTO> searchWorlds(@RequestParam String name) {
 		return ff14WorldService.searchWorlds(name);

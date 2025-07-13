@@ -1,3 +1,5 @@
+import { WorldState } from './modules/world';
+
 export interface AuthState {
     token: string | null;
     isLoggedIn: boolean;
@@ -7,6 +9,7 @@ export interface AuthState {
 
 export interface RootState {
     auth: AuthState;
+    world: WorldState;
 }
 
 export interface UserInfo {

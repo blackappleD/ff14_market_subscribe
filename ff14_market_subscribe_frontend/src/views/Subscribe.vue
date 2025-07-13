@@ -115,10 +115,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import axios from '@/utils/axios';
 import Toast from '@/components/Toast.vue';
 import { Plus } from '@element-plus/icons-vue';
+import { useStore } from 'vuex';
+import { World } from '@/store/modules/world';
 
 // 修改 debounce 函数的类型定义
 function debounce<T extends (...args: any[]) => any>(
@@ -135,12 +137,6 @@ function debounce<T extends (...args: any[]) => any>(
 }
 
 // 定义接口类型
-interface WorldDTO {
-    id: number;
-    name: string;
-    level: string;
-}
-
 interface ItemDTO {
     id: number;
     name: string;
@@ -155,7 +151,7 @@ interface ItemSubResDTO {
 
 interface UserSubscribeResDTO {
     id: number;
-    world: WorldDTO;
+    world: World;
     items: ItemSubResDTO[];
 }
 
@@ -172,11 +168,11 @@ interface Item {
 
 interface ServerGroup {
     id?: number;
-    worldId?: number;
+    worldId?: string;
     world?: string;
     worldSearch: string;
     showWorldDropdown: boolean;
-    worldResults: any[];
+    worldResults: World[];
     items: Item[];
 }
 
@@ -192,7 +188,7 @@ interface ItemSubReqDTO {
 interface UserSubscribeReqDTO {
     id?: number;
     world: {
-        id: number;
+        id: string;
     };
     items: ItemSubReqDTO[];
 }
@@ -204,6 +200,7 @@ export default defineComponent({
         Plus
     },
     setup() {
+        const store = useStore();
         const subscriptionGroups = ref<ServerGroup[]>([{
             worldSearch: '',
             showWorldDropdown: false,
@@ -234,6 +231,9 @@ export default defineComponent({
 
         const notifyEnabled = ref(true);
 
+        // Get all worlds from Vuex store
+        const allWorlds = computed(() => store.getters['world/getWorlds']);
+
         // 获取通知配置
         const fetchNotifyConfig = async () => {
             try {
@@ -256,48 +256,41 @@ export default defineComponent({
             }
         };
 
-        // 修改区服搜索逻辑，分为初始加载和搜索两个函数
-        const loadAllWorlds = async (groupIndex: number) => {
-            try {
-                const response = await axios.get('/ff14/world/search?name='); // 获取所有区服列表
-                subscriptionGroups.value[groupIndex].worldResults = response.data;
-            } catch (error) {
-                console.error('获取区服列表失败:', error);
+        // MODIFIED: This function now filters the local `worlds` ref
+        const searchWorlds = (groupIndex: number) => {
+            const group = subscriptionGroups.value[groupIndex];
+            if (!group.worldSearch) {
+                group.worldResults = allWorlds.value;
+            } else {
+                group.worldResults = allWorlds.value.filter((world: World) =>
+                    world.name.toLowerCase().includes(group.worldSearch.toLowerCase())
+                );
             }
         };
 
-        const searchWorlds = debounce(async (groupIndex: number) => {
-            const search = subscriptionGroups.value[groupIndex].worldSearch;
-            if (!search) {
-                await loadAllWorlds(groupIndex);
-                return;
-            }
-            try {
-                const response = await axios.get(`/ff14/world/search?name=${search}`);
-                subscriptionGroups.value[groupIndex].worldResults = response.data.data;
-            } catch (error) {
-                console.error('搜索区服失败:', error);
-            }
-        }, 300);
-
-        const searchItems = debounce(async (groupIndex: number, itemIndex: number) => {
-            const search = subscriptionGroups.value[groupIndex].items[itemIndex].nameSearch;
+        const debouncedSearchItems = debounce(async (groupIndex: number, itemIndex: number) => {
+            const item = subscriptionGroups.value[groupIndex].items[itemIndex];
+            const search = item.nameSearch;
             try {
                 const response = await axios.get(`/ff14/item/search?name=${search}`);
-                subscriptionGroups.value[groupIndex].items[itemIndex].searchResults = response.data.data;
+                item.searchResults = response.data.data;
             } catch (error) {
                 console.error('搜索物品失败:', error);
+                item.searchResults = [];
             }
         }, 300);
 
-        // 修改显示区服下拉列表的方法
-        const showWorldDropdown = async (groupIndex: number) => {
-            subscriptionGroups.value[groupIndex].showWorldDropdown = true;
-            await loadAllWorlds(groupIndex); // 直接加载所有区服列表
+        const searchItems = (groupIndex: number, itemIndex: number) => {
+            debouncedSearchItems(groupIndex, itemIndex);
         };
 
-        // 修改显示物品下拉列表的方法
-        const showItemDropdown = async (groupIndex: number, itemIndex: number) => {
+        const showWorldDropdown = (groupIndex: number) => {
+            const group = subscriptionGroups.value[groupIndex];
+            searchWorlds(groupIndex); // Populate with filtered results on focus
+            group.showWorldDropdown = true;
+        };
+
+        const showItemDropdown = (groupIndex: number, itemIndex: number) => {
             subscriptionGroups.value[groupIndex].items[itemIndex].showDropdown = true;
         };
 
@@ -311,7 +304,7 @@ export default defineComponent({
             }, 200);
         };
 
-        const selectWorld = (groupIndex: number, world: any) => {
+        const selectWorld = (groupIndex: number, world: World) => {
             const group = subscriptionGroups.value[groupIndex];
             group.worldId = world.id;
             group.world = world.name;
@@ -367,10 +360,10 @@ export default defineComponent({
         const fetchSubscriptions = async () => {
             try {
                 const response = await axios.get('/ff14/subscribe');
-                const subscriptions: UserSubscribeResDTO[] = response.data.data;
+                const data = response.data.data;
 
                 // 转换后端数据格式为前端格式，保留 ID
-                subscriptionGroups.value = subscriptions.map(sub => ({
+                subscriptionGroups.value = data.map((sub: UserSubscribeResDTO) => ({
                     id: sub.id,
                     worldId: sub.world.id,
                     world: sub.world.name,
@@ -404,6 +397,8 @@ export default defineComponent({
                         }]
                     });
                 }
+
+                showToast('订阅加载成功');
             } catch (error) {
                 console.error('获取订阅信息失败:', error);
                 // 如果获取失败，至少显示一个空的表单
@@ -474,27 +469,28 @@ export default defineComponent({
 
         // 在组件挂载时调用获取订阅信息的函数
         onMounted(() => {
+            store.dispatch('world/fetchWorlds'); // Fetch worlds via Vuex
             fetchSubscriptions();
             fetchNotifyConfig();
         });
 
         return {
             subscriptionGroups,
-            searchWorlds,
-            searchItems,
-            showWorldDropdown,
-            showItemDropdown,
-            hideDropdown,
-            selectWorld,
-            selectItem,
+            notifyEnabled,
+            toast,
+            handleNotifyToggle,
             addServerGroup,
             addItem,
             deleteItem,
-            fetchSubscriptions,
-            toast,
+            searchWorlds,
+            searchItems,
+            selectWorld,
+            selectItem,
             handleSubmit,
-            notifyEnabled,
-            handleNotifyToggle
+            showToast,
+            showWorldDropdown,
+            showItemDropdown,
+            hideDropdown
         };
     }
 });
