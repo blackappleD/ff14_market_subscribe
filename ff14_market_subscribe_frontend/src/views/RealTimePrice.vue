@@ -45,9 +45,9 @@
                                     </div>
                                 </div>
                             </div>
-                            <button class="action-button" @click="refreshGroup(subscribeGroup.id)">
+                            <!-- <button class="action-button" @click="refreshGroup(subscribeGroup.id)">
                                 刷新物价
-                            </button>
+                            </button> -->
                         </div>
                         <table class="price-table">
                             <thead>
@@ -345,7 +345,7 @@ export default defineComponent({
                 isLoading.value = false;
             }
         };
-        
+
         onMounted(async () => {
             await store.dispatch('world/fetchWorlds'); // Fetch worlds via Vuex
             await checkSubscriptions();
@@ -353,7 +353,7 @@ export default defineComponent({
         
         // ... other methods like startCooldown, updateCooldownStorage, formatPrice, etc. remain
         // ... but I'll paste them for completeness
-         const startCooldown = () => {
+        const startCooldown = () => {
             cooldownTime.value = cooldownTime.value || 120;
             if (cooldownTimer) {
                 clearInterval(cooldownTimer);
@@ -383,7 +383,7 @@ export default defineComponent({
 
                 if (remainingTime > 0) {
                     cooldownTime.value = remainingTime;
-                    startCooldown();
+                startCooldown();
                     return true;
                 }
             }
