@@ -10,11 +10,11 @@
                 <h2 class="page-title">实时物价</h2>
                 <div class="refresh-section">
                     <button @click="fetchPriceData" class="refresh-button" :disabled="loading || cooldownTime > 0">
-                        <template v-if="loading">加载中...</template>
+                        <template v-if="loading">拉取中...</template>
                         <template v-else-if="cooldownTime > 0">
                             {{ cooldownTime }}秒后可刷新
                         </template>
-                        <template v-else>刷新数据</template>
+                        <template v-else>拉取全部分组物价</template>
                     </button>
                     <span class="last-update" v-if="lastUpdateTime">
                         上次刷新: {{ formatTime(lastUpdateTime) }}
@@ -24,7 +24,7 @@
  
             <!-- 加载状态显示 -->
             <div v-if="isLoading" class="loading-state">
-                数据加载中，请稍后...
+                分组信息加载中，请稍后...
             </div>
 
             <!-- 订阅实时价格分组展示 (MODIFIED) -->
@@ -45,9 +45,9 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- <button class="action-button" @click="refreshGroup(subscribeGroup.id)">
-                                刷新物价
-                            </button> -->
+                            <button class="action-button" @click="refreshGroup(subscribeGroup.id)">
+                                拉取分组物价
+                            </button>
                         </div>
                         <table class="price-table">
                             <thead>
@@ -65,28 +65,33 @@
                             </thead>
                             <tbody>
                                 <template v-for="item in subscribeGroup.itemPriceGroups" :key="item.id">
-                                    <!-- 主行（默认显示第一条价格信息） -->
-                                    <tr class="main-row"
-                                        v-if="item.itemPriceInfoList && item.itemPriceInfoList.length > 0">
+                                    <tr class="main-row">
                                         <td>
                                             <div class="item-name-cell">
                                                 <button class="collapse-button"
+                                                    v-if="item.itemPriceInfoList && item.itemPriceInfoList.length > 0"
                                                     @click="toggleItemPrices(subscribeGroup.id, item.id)">
                                                     {{ isExpanded(subscribeGroup.id, item.id) ? '▼' : '▶' }}
                                                 </button>
+                                                <span v-else class="collapse-button-placeholder"></span>
                                                 {{ item.name }}
                                             </div>
                                         </td>
-                                        <td>{{ item.itemPriceInfoList[0].worldName }}</td>
-                                        <td :class="{ 'lower-price': item.itemPriceInfoList[0].lowerThreshold }">
-                                            {{ formatPrice(item.itemPriceInfoList[0].pricePerUnit) }}
-                                        </td>
-                                        <td>{{ item.itemPriceInfoList[0].quantity }}</td>
-                                        <td>{{ formatPrice(item.itemPriceInfoList[0].tax) }}</td>
-                                        <td>{{ formatPrice(item.itemPriceInfoList[0].total) }}</td>
-                                        <td>{{ item.itemPriceInfoList[0].hq ? 'HQ' : 'NQ' }}</td>
-                                        <td>{{ item.itemPriceInfoList[0].retainerName || '-' }}</td>
-                                        <td>{{ item.itemPriceInfoList[0].creatorName || '-' }}</td>
+                                        <template v-if="item.itemPriceInfoList && item.itemPriceInfoList.length > 0">
+                                            <td>{{ item.itemPriceInfoList[0].worldName }}</td>
+                                            <td :class="{ 'lower-price': item.itemPriceInfoList[0].lowerThreshold }">
+                                                {{ formatPrice(item.itemPriceInfoList[0].pricePerUnit) }}
+                                            </td>
+                                            <td>{{ item.itemPriceInfoList[0].quantity }}</td>
+                                            <td>{{ formatPrice(item.itemPriceInfoList[0].tax) }}</td>
+                                            <td>{{ formatPrice(item.itemPriceInfoList[0].total) }}</td>
+                                            <td>{{ item.itemPriceInfoList[0].hq ? 'HQ' : 'NQ' }}</td>
+                                            <td>{{ item.itemPriceInfoList[0].retainerName || '-' }}</td>
+                                            <td>{{ item.itemPriceInfoList[0].creatorName || '-' }}</td>
+                                        </template>
+                                        <template v-else>
+                                            <td colspan="8" class="no-price-info-cell">-</td>
+                                        </template>
                                     </tr>
                                     <!-- 展开的额外价格信息 -->
                                     <template
@@ -232,7 +237,7 @@ export default defineComponent({
             debouncedSaveWorld(group.id, world.id);
         };
 
-        const refreshGroup = async (groupId: number) => {
+        const refreshGroup = async (groupId: number, showMessage = true) => {
             try {
                 const response = await axios.get(`/ff14/price/on_time/${groupId}`);
                 const updatedGroupData = response.data.data; // Corrected: access response.data.data
@@ -245,20 +250,28 @@ export default defineComponent({
                         ...updatedGroupData,
                         worldId: updatedGroupData.world.id,
                         worldName: updatedGroupData.world.name,
+                        itemPriceGroups: oldGroup.itemPriceGroups.map(oldItem => {
+                            const newItem = updatedGroupData.itemPriceGroups?.find((i: any) => i.id === oldItem.id);
+                            return newItem ? { ...oldItem, ...newItem } : oldItem;
+                        }),
                         worldSearchText: oldGroup.worldSearchText,
                         showWorldDropdown: oldGroup.showWorldDropdown,
                         worldResults: oldGroup.worldResults,
                     };
                     priceData.value[index] = newGroup;
 
-                    ElMessage.success(`分组 ${newGroup.worldName} 的价格已刷新`);
+                    if (showMessage) {
+                        ElMessage.success(`分组 ${newGroup.worldName} 的价格已刷新`);
+                    }
                 } else if (!updatedGroupData) {
-                     ElMessage.error('刷新失败，未获取到分组数据');
+                     if (showMessage) ElMessage.error('刷新失败，未获取到分组数据');
+                     throw new Error('未获取到分组数据');
                 }
-
+                return Promise.resolve();
             } catch (error: any) {
                 console.error('刷新分组价格失败:', error);
-                ElMessage.error(error.response?.data?.message || '刷新分组价格失败');
+                if (showMessage) ElMessage.error(error.response?.data?.message || '刷新分组价格失败');
+                return Promise.reject(error);
             }
         };
 
@@ -281,74 +294,70 @@ export default defineComponent({
 
         const fetchPriceData = async () => {
             if (loading.value || cooldownTime.value > 0) return;
+            if (!priceData.value || priceData.value.length === 0) {
+                ElMessage.info('没有可以刷新的分组');
+                return;
+            }
+
+            loading.value = true;
             try {
-                loading.value = true;
-                const response = await axios.get('/ff14/price/on_time', { timeout: 120000 });
-                priceData.value = response.data.data.map((group: any) => ({
-                    ...group,
-                    // Safely access world properties using optional chaining
-                    worldId: group.world?.id,
-                    worldName: group.world?.name || group.worldName, // Fallback to the existing worldName
-                    worldSearchText: group.world?.name || group.worldName, 
-                    showWorldDropdown: false,
-                    worldResults: [],
-                }));
+                const refreshPromises = priceData.value.map(group => refreshGroup(group.id, false));
+                await Promise.all(refreshPromises);
+
                 lastUpdateTime.value = new Date();
-                localStorage.setItem('price_data', JSON.stringify(priceData.value));
                 updateCooldownStorage();
                 startCooldown();
-            } catch (error: any) {
-                // ... error handling
-                console.error('获取价格数据失败:', error);
-                if (error.response?.status === 401) {
-                    router.push('/login');
-                } else {
-                    if (error.code === 'ECONNABORTED') {
-                        alert('请求超时，数据加载较慢，请稍后重试');
-                    } else {
-                        alert(error.response?.data?.message || error.response?.data?.data || '获取数据失败，请重试');
-                    }
-                }
+                ElMessage.success('所有分组价格已刷新');
+            } catch (error) {
+                console.error('拉取全部分组物价失败:', error);
+                ElMessage.error('部分分组刷新失败，请检查控制台');
             } finally {
                 loading.value = false;
             }
         };
 
-        const checkSubscriptions = async () => {
+        const fetchSubscriptionGroups = async () => {
+            isLoading.value = true;
             try {
                 const response = await axios.get('/ff14/subscribe');
-                hasSubscriptions.value = response.data.data && response.data.data.length > 0;
-                if (hasSubscriptions.value) {
-                    if (!checkCooldown()) {
-                        await fetchPriceData();
-                    } else {
-                        // ...
-                        const cachedData = localStorage.getItem('price_data');
-                        if (cachedData) {
-                            priceData.value = JSON.parse(cachedData);
-                            const savedLastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
-                            if (savedLastUpdate) {
-                                lastUpdateTime.value = new Date(parseInt(savedLastUpdate));
-                            }
-                        }
-                    }
+                const groups = response.data.data;
+
+                if (groups && groups.length > 0) {
+                    hasSubscriptions.value = true;
+                    priceData.value = groups.map((group: any) => ({
+                        id: group.id,
+                        worldId: group.world.id,
+                        worldName: group.world.name,
+                        // Corrected mapping based on provided API response
+                        itemPriceGroups: (group.items || []).map((subItem: any) => ({
+                            id: subItem.item.id,
+                            name: subItem.item.name,
+                            itemPriceInfoList: [], // Price info is initially empty
+                        })),
+                        worldSearchText: group.world.name,
+                        showWorldDropdown: false,
+                        worldResults: [],
+                    }));
+                } else {
+                    hasSubscriptions.value = false;
                 }
             } catch (error: any) {
-                //...
-                console.error('检查订阅失败:', error);
+                console.error('获取订阅分组失败:', error);
                 if (error.response?.status === 401) {
                     router.push('/login');
                 } else {
-                    alert(error.response?.data?.message || error.response?.data?.data || '检查订阅状态失败，请重试');
+                    alert(error.response?.data?.message || '获取订阅分组失败');
                 }
             } finally {
                 isLoading.value = false;
             }
         };
 
+
         onMounted(async () => {
             await store.dispatch('world/fetchWorlds'); // Fetch worlds via Vuex
-            await checkSubscriptions();
+            await fetchSubscriptionGroups();
+            checkCooldown();
         });
         
         // ... other methods like startCooldown, updateCooldownStorage, formatPrice, etc. remain
@@ -492,7 +501,10 @@ export default defineComponent({
 }
 
 .subscribe-group {
-    margin-bottom: 30px;
+    border: 1px solid #ebeef5;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
 }
 
 .group-header {
@@ -562,6 +574,26 @@ export default defineComponent({
 
 .action-button:hover {
     background-color: #e0e0e0;
+}
+
+.collapse-button-placeholder {
+    display: inline-block;
+    width: 24px; /* Same as collapse-button padding + font-size roughly */
+    height: 24px;
+}
+
+.no-price-data {
+    text-align: center;
+    padding: 20px;
+    color: #999;
+    background: #fafafa;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+.no-price-info-cell {
+    text-align: center;
+    color: #999;
 }
 
 .price-table {
