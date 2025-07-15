@@ -9,6 +9,14 @@
             <div class="header">
                 <h2 class="page-title">实时物价</h2>
                 <div class="refresh-section">
+                    <div class="settings-wrapper">
+                        <div class="settings-item">
+                            <label>显示条数：</label>
+                            <select v-model="maxListings" @change="updateMaxListings" class="listings-select">
+                                <option v-for="option in listingsOptions" :key="option" :value="option">{{ option }}</option>
+                            </select>
+                        </div>
+                    </div>
                     <button @click="fetchPriceData" class="refresh-button" :disabled="loading || cooldownTime > 0">
                         <template v-if="loading">拉取中...</template>
                         <template v-else-if="cooldownTime > 0">
@@ -181,6 +189,12 @@ interface subscribePriceGroup {
     worldResults: World[];
 }
 
+interface UserConfig {
+    id: number;
+    notify: boolean;
+    maxListings: number;
+}
+
 const COOLDOWN_KEY = 'price_refresh_cooldown';
 const LAST_UPDATE_KEY = 'price_last_update';
 
@@ -200,6 +214,32 @@ export default defineComponent({
         const cooldownTime = ref(0);
         let cooldownTimer: number | null = null;
         const expandedItems = ref(new Set<string>());
+        const maxListings = ref(10);
+        const listingsOptions = ref([5, 10, 20, 30, 50, 100]);
+
+        // 获取用户配置
+        const fetchUserConfig = async () => {
+            try {
+                const response = await axios.get('/ff14/sub_cfg');
+                const config: UserConfig = response.data.data;
+                if (config && config.maxListings) {
+                    maxListings.value = config.maxListings;
+                }
+            } catch (error) {
+                console.error('获取用户配置失败:', error);
+            }
+        };
+
+        // 更新maxListings设置
+        const updateMaxListings = async () => {
+            try {
+                await axios.put(`/ff14/sub_cfg/max_listings?maxListings=${maxListings.value}`);
+                ElMessage.success('显示条数配置已更新');
+            } catch (error: any) {
+                console.error('更新显示条数失败:', error);
+                ElMessage.error(error.response?.data?.message || '更新显示条数失败');
+            }
+        };
 
         // Get all worlds from Vuex store
         const allWorlds = computed(() => store.getters['world/getWorlds']);
@@ -356,6 +396,7 @@ export default defineComponent({
 
         onMounted(async () => {
             await store.dispatch('world/fetchWorlds'); // Fetch worlds via Vuex
+            await fetchUserConfig(); // 获取用户配置
             await fetchSubscriptionGroups();
             checkCooldown();
         });
@@ -440,12 +481,15 @@ export default defineComponent({
             lastUpdateTime,
             cooldownTime,
             expandedItems,
+            maxListings,
+            listingsOptions,
             toggleItemPrices,
             isExpanded,
             fetchPriceData,
             formatTime,
             formatPrice,
             refreshGroup,
+            updateMaxListings,
             // new methods
             searchWorlds,
             selectWorld,
@@ -559,6 +603,37 @@ export default defineComponent({
     background-color: #f0f0f0;
 }
 
+.settings-wrapper {
+    display: flex;
+    gap: 15px;
+    margin-right: 15px;
+}
+
+.settings-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.settings-item label {
+    font-size: 14px;
+    color: #666;
+}
+
+.listings-select {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 14px;
+    background-color: white;
+    cursor: pointer;
+    min-width: 70px;
+}
+
+.listings-select:focus {
+    outline: none;
+    border-color: #4285f4;
+}
 
 .action-button {
     height: 32px; /* Match input height */

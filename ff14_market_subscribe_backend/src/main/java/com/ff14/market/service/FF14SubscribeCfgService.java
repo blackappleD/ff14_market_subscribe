@@ -43,6 +43,15 @@ public class FF14SubscribeCfgService {
 		}
 	}
 
+	public void updateMaxListings(Integer maxListings) {
+		Optional<FF14SubscribeCfgPO> byUser = ff14SubscribeCfgRepo.findByUser(AdminUtil.getCurrentUser());
+		if (byUser.isPresent()) {
+			FF14SubscribeCfgPO ff14SubscribeCfg = byUser.get();
+			ff14SubscribeCfg.setMaxListings(maxListings);
+			ff14SubscribeCfgRepo.save(ff14SubscribeCfg);
+		}
+	}
+
 	public SubscribeCfgResDTO get() {
 
 		FF14SubscribeCfgPO byUser = findByUser(AdminUtil.getCurrentUser());

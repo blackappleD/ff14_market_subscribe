@@ -33,4 +33,7 @@ public class FF14SubscribeCfgPO {
 
 	@Comment("是否开启推送通知")
 	private Boolean notify = false;
+
+	@Comment("物价显示最大条数")
+	private Integer maxListings = 10;
 }

@@ -13,6 +13,7 @@ import com.ff14.market.dto.WorldDTO;
 import com.ff14.market.exception.FF14Exception;
 import com.ff14.market.mapper.FF14WorldMapper;
 import com.ff14.market.po.FF14ItemSubPO;
+import com.ff14.market.po.FF14SubscribeCfgPO;
 import com.ff14.market.po.FF14SubscribeGroupPO;
 import com.ff14.market.po.FF14UserPO;
 import com.ff14.market.repo.FF14UserSubscribeRepo;
@@ -54,12 +55,22 @@ public class FF14PriceService {
 	private FF14UserSubscribeRepo ff14UserSubscribeRepo;
 
 	@Resource
+	private FF14SubscribeCfgService ff14SubscribeCfgService;
+
+	@Resource
 	private FF14WorldMapper ff14WorldMapper;
+
+	private Integer getUserMaxListings(FF14UserPO user) {
+		FF14SubscribeCfgPO cfg = ff14SubscribeCfgService.findByUser(user);
+		return cfg.getMaxListings() != null ? cfg.getMaxListings() : 10;
+	}
 
 	public List<ItemPriceInfo> requestItemPriceInfo(String worldName,
 			Integer itemId,
 			Boolean hq) {
-		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemId, 50, hq);
+		FF14UserPO currentUser = AdminUtil.getCurrentUser();
+		Integer maxListings = getUserMaxListings(currentUser);
+		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemId, maxListings, hq);
 		return requestItemPriceInfo(url, worldName, null);
 	}
 
@@ -75,7 +86,8 @@ public class FF14PriceService {
 		WorldDTO worldDTO = ff14WorldMapper.po2dto(userSubscribe.getWorld());
 		data.setWorld(worldDTO);
 		data.setWorldName(userSubscribe.getWorld().getName());
-		data.setItemPriceGroups(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName()));
+		data.setItemPriceGroups(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName(),
+				AdminUtil.getCurrentUser()));
 		return data;
 	}
 
@@ -87,13 +99,20 @@ public class FF14PriceService {
 			data.setId(userSubscribe.getId());
 			data.setWorld(ff14WorldMapper.po2dto(userSubscribe.getWorld()));
 			data.setWorldName(userSubscribe.getWorld().getName());
-			data.setItemPriceGroups(requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName()));
+			data.setItemPriceGroups(
+					requestItemPriceInfo(userSubscribe.getItems(), userSubscribe.getWorld().getName(), user));
 			return data;
 		}).toList();
 	}
 
-	public List<SubscribePriceGroup.ItemPriceGroup> requestItemPriceInfo(List<FF14ItemSubPO> itemSubs, String worldName) {
+	public List<SubscribePriceGroup.ItemPriceGroup> requestItemPriceInfo(List<FF14ItemSubPO> itemSubs,
+			String worldName) {
+		return requestItemPriceInfo(itemSubs, worldName, AdminUtil.getCurrentUser());
+	}
 
+	public List<SubscribePriceGroup.ItemPriceGroup> requestItemPriceInfo(List<FF14ItemSubPO> itemSubs, String worldName,
+			FF14UserPO user) {
+		Integer maxListings = getUserMaxListings(user);
 		List<SubscribePriceGroup.ItemPriceGroup> list = ListUtil.list(false);
 		List<FF14ItemSubPO> hqItemSubs = itemSubs.stream().filter(FF14ItemSubPO::getHq).toList();
 		List<FF14ItemSubPO> notHqItemSubs = itemSubs.stream().filter(ff14ItemSubPO -> !ff14ItemSubPO.getHq()).toList();
@@ -106,21 +125,21 @@ public class FF14PriceService {
 			list.add(SubscribePriceGroup.ItemPriceGroup.builder()
 					.id(hqItemSubs.getFirst().getItem().getId())
 					.name(hqItemSubs.getFirst().getItem().getName())
-					.itemPriceInfoList(requestItemPriceInfo(hqItemSubs.getFirst(), worldName))
+					.itemPriceInfoList(requestItemPriceInfo(hqItemSubs.getFirst(), worldName, user))
 					.build());
 		} else {
 			String hqItemIdStr = itemSubs.stream()
 					.filter(FF14ItemSubPO::getHq)
 					.map(itemSub -> String.valueOf(itemSub.getItem().getId()))
 					.collect(Collectors.joining(","));
-			String hqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, hqItemIdStr, 5, true);
+			String hqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, hqItemIdStr, maxListings, true);
 			list.addAll(request(itemIdNameMap, worldName, hqUrl));
 		}
 		if (notHqItemSubs.size() == 1) {
 			list.add(SubscribePriceGroup.ItemPriceGroup.builder()
 					.id(notHqItemSubs.getFirst().getItem().getId())
 					.name(notHqItemSubs.getFirst().getItem().getName())
-					.itemPriceInfoList(requestItemPriceInfo(notHqItemSubs.getFirst(), worldName))
+					.itemPriceInfoList(requestItemPriceInfo(notHqItemSubs.getFirst(), worldName, user))
 					.build());
 		} else {
 			String notHqItemIdStr = itemSubs.stream()
@@ -128,15 +147,15 @@ public class FF14PriceService {
 					.map(itemSub -> String.valueOf(itemSub.getItem().getId()))
 					.collect(Collectors.joining(","));
 
-			String nqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, notHqItemIdStr, 5, "");
+			String nqUrl = CharSequenceUtil.format(UNIVERSAL_URI, worldName, notHqItemIdStr, maxListings, "");
 			list.addAll(request(itemIdNameMap, worldName, nqUrl));
 		}
 		return list;
 
 	}
 
-
-	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, FF14ItemSubPO> itemIdNameMap, String worldName, String hqUrl) {
+	private List<SubscribePriceGroup.ItemPriceGroup> request(Map<String, FF14ItemSubPO> itemIdNameMap, String worldName,
+			String hqUrl) {
 		try (HttpResponse response = submitRequest(hqUrl)) {
 			if (response.getStatus() == 200) {
 
@@ -166,8 +185,13 @@ public class FF14PriceService {
 	}
 
 	public List<ItemPriceInfo> requestItemPriceInfo(FF14ItemSubPO itemSub, String worldName) {
+		return requestItemPriceInfo(itemSub, worldName, AdminUtil.getCurrentUser());
+	}
 
-		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), 5, itemSub.getHq());
+	public List<ItemPriceInfo> requestItemPriceInfo(FF14ItemSubPO itemSub, String worldName, FF14UserPO user) {
+		Integer maxListings = getUserMaxListings(user);
+		String url = CharSequenceUtil.format(UNIVERSAL_URI, worldName, itemSub.getItem().getId(), maxListings,
+				itemSub.getHq());
 		return requestItemPriceInfo(url, worldName, itemSub.getNotifyThreshold());
 	}
 
@@ -201,7 +225,8 @@ public class FF14PriceService {
 			Future<HttpResponse> submit = threadPoolExecutor.submit(() -> {
 				log.info("请求universalis api：{}", url);
 				return HttpUtil.createGet(url)
-						.setSSLSocketFactory(SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
+						.setSSLSocketFactory(
+								SSLContextBuilder.create().setProtocol("TLSv1.2").build().getSocketFactory())
 						.timeout(60000)
 						.execute();
 			});

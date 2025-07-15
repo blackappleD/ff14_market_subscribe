@@ -11,8 +11,10 @@ import lombok.EqualsAndHashCode;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class SubscribeCfgReqDTO extends LongIdDTO{
+public class SubscribeCfgReqDTO extends LongIdDTO {
 
 	private Boolean notify;
+
+	private Integer maxListings;
 
 }

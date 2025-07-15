@@ -15,4 +15,6 @@ public class SubscribeCfgResDTO {
 
 	private Boolean notify;
 
+	private Integer maxListings;
+
 }
