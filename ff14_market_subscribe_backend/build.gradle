@@ -9,7 +9,7 @@ plugins {
 ext {
     projectName = 'ff14_market'
     springBootVersion = '3.3.4'
-    fromImage = 'http://127.0.0.1:5000/openjdk:21'
+    fromImage = 'openjdk:21'
     repository = '127.0.0.1:5000'
 }
 group = 'com.pangkazhu'
