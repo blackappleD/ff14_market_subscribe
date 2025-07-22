@@ -4,6 +4,7 @@
             <router-link to="/" class="nav-item">首页</router-link>
             <router-link to="/subscribe" class="nav-item">物品订阅</router-link>
             <router-link to="/realtime" class="nav-item active">实时物价</router-link>
+            <router-link to="/itemsearch" class="nav-item">物价查询</router-link>
         </div>
         <div class="content">
             <div class="header">
@@ -53,22 +54,28 @@
                                     </div>
                                 </div>
                             </div>
-                            <button class="action-button" @click="refreshGroup(subscribeGroup.id)">
-                                拉取分组物价
+                            <button class="action-button" @click="refreshGroup(subscribeGroup.id)" :disabled="groupLoadingStates[subscribeGroup.id]">
+                                <div v-if="groupLoadingStates[subscribeGroup.id]" class="loader"></div>
+                                <span v-else>拉取分组物价</span>
                             </button>
                         </div>
-                        <table class="price-table">
+                        <!-- 加载状态蒙版，只在加载时显示 -->
+                        <div v-show="groupLoadingStates[subscribeGroup.id]" class="table-loading">
+                            <div class="loader"></div>
+                        </div>
+                        <!-- 表格始终存在，加载时通过蒙版模糊效果显示 -->
+                        <table class="price-table" :class="{'table-hidden': groupLoadingStates[subscribeGroup.id]}">
                             <thead>
                                 <tr>
-                                    <th>物品名称</th>
-                                    <th>所在区服</th>
-                                    <th>单价</th>
-                                    <th>数量</th>
-                                    <th>手续费</th>
-                                    <th>总价</th>
-                                    <th>品质</th>
-                                    <th>雇员名称</th>
-                                    <th>生产者</th>
+                                    <th style="width: 18%;">物品名称</th>
+                                    <th style="width: 10%;">所在区服</th>
+                                    <th style="width: 15%;">单价</th>
+                                    <th style="width: 5%;">数量</th>
+                                    <th style="width: 10%;">手续费</th>
+                                    <th style="width: 10%;">总价</th>
+                                    <th style="width: 5%;">品质</th>
+                                    <th style="width: 10%;">雇员名称</th>
+                                    <th style="width: 10%;">生产者</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -98,7 +105,13 @@
                                             <td>{{ item.itemPriceInfoList[0].creatorName || '-' }}</td>
                                         </template>
                                         <template v-else>
-                                            <td colspan="8" class="no-price-info-cell">-</td>
+                                            <td>
+                                                <div class="item-name-cell">
+                                                    <span class="collapse-button-placeholder"></span>
+                                                    -
+                                                </div>
+                                            </td>
+                                            <td colspan="7" class="no-price-info-cell">-</td>
                                         </template>
                                     </tr>
                                     <!-- 展开的额外价格信息 -->
@@ -195,8 +208,10 @@ interface UserConfig {
     maxListings: number;
 }
 
+// Constants for localStorage keys
 const COOLDOWN_KEY = 'price_refresh_cooldown';
 const LAST_UPDATE_KEY = 'price_last_update';
+const PRICE_DATA_KEY = 'price_data';
 
 export default defineComponent({
     name: 'RealTimePrice',
@@ -216,6 +231,7 @@ export default defineComponent({
         const expandedItems = ref(new Set<string>());
         const maxListings = ref(10);
         const listingsOptions = ref([5, 10, 20, 30, 50, 100]);
+        const groupLoadingStates = ref<Record<number, boolean>>({});
 
         // 获取用户配置
         const fetchUserConfig = async () => {
@@ -277,7 +293,54 @@ export default defineComponent({
             debouncedSaveWorld(group.id, world.id);
         };
 
+        // 保存价格数据到缓存
+        const savePriceDataToCache = () => {
+            try {
+                localStorage.setItem(PRICE_DATA_KEY, JSON.stringify(priceData.value));
+            } catch (e) {
+                console.error('保存价格数据缓存失败:', e);
+            }
+        };
+
+        // 从缓存加载价格数据
+        const loadCachedPriceData = () => {
+            try {
+                const cachedData = localStorage.getItem(PRICE_DATA_KEY);
+                if (cachedData) {
+                    const parsedData = JSON.parse(cachedData);
+                    
+                    // 仅当有缓存数据且当前priceData结构已初始化时进行合并
+                    if (parsedData && Array.isArray(parsedData) && priceData.value.length > 0) {
+                        // 合并缓存数据到当前数据
+                        parsedData.forEach((cachedGroup: any) => {
+                            const currentGroup = priceData.value.find(g => g.id === cachedGroup.id);
+                            if (currentGroup) {
+                                // 将缓存的价格数据合并到当前组
+                                cachedGroup.itemPriceGroups.forEach((cachedItem: any) => {
+                                    const currentItem = currentGroup.itemPriceGroups.find(
+                                        (item: any) => item.id === cachedItem.id
+                                    );
+                                    if (currentItem) {
+                                        // 应用缓存的价格数据
+                                        currentItem.itemPriceInfoList = cachedItem.itemPriceInfoList || [];
+                                    }
+                                });
+                            }
+                        });
+                        
+                        console.log('已加载缓存的价格数据');
+                    }
+                }
+            } catch (e) {
+                console.error('加载价格数据缓存失败:', e);
+            }
+        };
+
+        // 更新 refreshGroup 函数以保存缓存
         const refreshGroup = async (groupId: number, showMessage = true) => {
+            // Set loading state for this group
+            groupLoadingStates.value[groupId] = true;
+            
             try {
                 const response = await axios.get(`/ff14/price/on_time/${groupId}`);
                 const updatedGroupData = response.data.data; // Corrected: access response.data.data
@@ -300,6 +363,9 @@ export default defineComponent({
                     };
                     priceData.value[index] = newGroup;
 
+                    // 保存更新后的价格数据到缓存
+                    savePriceDataToCache();
+                    
                     if (showMessage) {
                         ElMessage.success(`分组 ${newGroup.worldName} 的价格已刷新`);
                     }
@@ -312,6 +378,9 @@ export default defineComponent({
                 console.error('刷新分组价格失败:', error);
                 if (showMessage) ElMessage.error(error.response?.data?.message || '刷新分组价格失败');
                 return Promise.reject(error);
+            } finally {
+                // Clear loading state regardless of success or failure
+                groupLoadingStates.value[groupId] = false;
             }
         };
 
@@ -347,6 +416,10 @@ export default defineComponent({
                 lastUpdateTime.value = new Date();
                 updateCooldownStorage();
                 startCooldown();
+                
+                // 保存所有价格数据到缓存
+                savePriceDataToCache();
+                
                 ElMessage.success('所有分组价格已刷新');
             } catch (error) {
                 console.error('拉取全部分组物价失败:', error);
@@ -378,6 +451,9 @@ export default defineComponent({
                         showWorldDropdown: false,
                         worldResults: [],
                     }));
+                    
+                    // 加载缓存的价格数据
+                    loadCachedPriceData();
                 } else {
                     hasSubscriptions.value = false;
                 }
@@ -494,7 +570,8 @@ export default defineComponent({
             searchWorlds,
             selectWorld,
             showWorldDropdown,
-            hideDropdown
+            hideDropdown,
+            groupLoadingStates
         };
     }
 });
@@ -545,10 +622,12 @@ export default defineComponent({
 }
 
 .subscribe-group {
+    position: relative;
     border: 1px solid #ebeef5;
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
+    min-height: 200px; /* 确保有最小高度 */
 }
 
 .group-header {
@@ -674,6 +753,7 @@ export default defineComponent({
 .price-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed; /* 确保列宽固定 */
 }
 
 .price-table th,
@@ -681,6 +761,11 @@ export default defineComponent({
     padding: 12px;
     text-align: left;
     border-bottom: 1px solid #eee;
+}
+
+.main-row td {
+    border-top: none;
+    border-bottom: none;
 }
 
 .price-table th {
@@ -772,5 +857,75 @@ export default defineComponent({
 
 .expanded-row td:first-child {
     padding-left: 40px;
+}
+
+/* Loading animation */
+.loader {
+  width: 50px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #000000;
+  -webkit-mask: radial-gradient(circle closest-side at 50% 40%,#0000 94%, #000);
+  transform-origin: 50% 40%;
+  /* 基础动画移除，由table-loading .loader处理 */
+  margin: 0 auto;
+}
+
+.action-button .loader {
+  width: 20px;
+  margin: 0 auto;
+  display: block;
+  animation: loaderRotate 1s infinite linear; /* 按钮加载器只需要旋转动画 */
+}
+
+.action-button {
+  min-width: 100px; /* 保持按钮宽度一致 */
+}
+
+.table-loading {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  top: 60px; /* group-header高度 + padding */
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  background-color: rgba(255, 255, 255, 0.7); /* 半透明背景 */
+  z-index: 10;
+  backdrop-filter: blur(3px); /* 添加背景模糊效果 */
+  animation: fadeInOut 0.8s ease-in-out; /* 浅入浅出动画 */
+}
+
+/* 简化的加载动画 - 只保留旋转 */
+@keyframes loaderRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 蒙版淡入淡出效果 */
+@keyframes fadeInOut {
+  0% { opacity: 0; backdrop-filter: blur(0px); }
+  100% { opacity: 1; backdrop-filter: blur(3px); }
+}
+
+/* 加载器的呼吸效果 - 仅透明度变化 */
+@keyframes loaderPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.table-loading .loader {
+  /* 分开应用不同的动画属性，避免冲突 */
+  animation: loaderRotate 1s infinite linear;
+  animation-name: loaderRotate, loaderPulse;
+  animation-duration: 1s, 2s;
+  animation-timing-function: linear, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+}
+
+.table-hidden {
+  /* 不使用 opacity，因为我们使用模糊效果替代 */
+  pointer-events: none; /* 防止在加载时点击表格 */
 }
 </style>

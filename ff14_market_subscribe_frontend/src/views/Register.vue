@@ -4,6 +4,7 @@
             <router-link to="/" class="nav-item">首页</router-link>
             <router-link to="/subscribe" class="nav-item">物品订阅</router-link>
             <router-link to="/realtime" class="nav-item">实时物价</router-link>
+            <router-link to="/itemsearch" class="nav-item">物价查询</router-link>
         </div>
         <div class="content">
             <div class="register-box">

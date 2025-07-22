@@ -4,6 +4,7 @@ import Subscribe from '@/views/Subscribe.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import RealTimePrice from '@/views/RealTimePrice.vue'
+import ItemSearch from '@/views/ItemSearch.vue'
 import store from '@/store'
 
 const routes: Array<RouteRecordRaw> = [
@@ -32,6 +33,12 @@ const routes: Array<RouteRecordRaw> = [
     path: '/realtime',
     name: 'RealTimePrice',
     component: RealTimePrice,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/itemsearch',
+    name: 'ItemSearch',
+    component: ItemSearch,
     meta: { requiresAuth: true }
   },
   {
