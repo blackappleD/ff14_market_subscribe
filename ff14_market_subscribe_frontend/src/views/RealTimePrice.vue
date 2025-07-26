@@ -68,7 +68,7 @@
                             <thead>
                                 <tr>
                                     <th style="width: 18%;">物品名称</th>
-                                    <th style="width: 10%;">所在区服</th>
+                                    <th style="width: 10%;">所在服务器</th>
                                     <th style="width: 15%;">单价</th>
                                     <th style="width: 5%;">数量</th>
                                     <th style="width: 10%;">手续费</th>
@@ -276,11 +276,11 @@ export default defineComponent({
         const debouncedSaveWorld = debounce(async (groupId: number, worldId: string) => {
             try {
                 await axios.put(`/ff14/subscribe/${groupId}/world/${worldId}`);
-                ElMessage.success('世界已自动保存，正在刷新价格...');
+                ElMessage.success('服务器已自动保存，正在刷新价格...');
                 await refreshGroup(groupId);
             } catch (error: any) {
-                console.error('自动保存世界失败:', error);
-                ElMessage.error(error.response?.data?.message || '自动保存世界失败');
+                console.error('自动保存服务器失败:', error);
+                ElMessage.error(error.response?.data?.message || '自动保存服务器失败');
             }
         }, 1000);
 

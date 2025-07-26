@@ -12,15 +12,15 @@
             </div>
             
             <div class="search-section">
-                <!-- 先选择世界 -->
+                <!-- 先选择服务器 -->
                 <div class="world-selector" :class="{'highlight-error': worldError}">
-                    <label>选择世界：</label>
+                    <label>服务器：</label>
                     <input 
                         v-model="worldSearchText" 
                         @input="searchWorlds" 
                         @focus="showWorldDropdown = true" 
                         @blur="hideWorldDropdown"
-                        placeholder="请先选择世界" 
+                        placeholder="输入以查询服务器"
                         class="world-input"
                         :class="{'error-border': worldError}"
                     />
@@ -93,7 +93,7 @@
                     <thead>
                         <tr>
                             <th style="width: 15%;">物品名称</th>
-                            <th style="width: 10%;">所在区服</th>
+                            <th style="width: 10%;">所在服务器</th>
                             <th style="width: 15%;">单价</th>
                             <th style="width: 5%;">数量</th>
                             <th style="width: 10%;">手续费</th>
@@ -284,7 +284,7 @@ export default defineComponent({
             addToHistory(item);
         };
         
-        // 保存选中的世界到localStorage
+        // 保存选中的服务器到localStorage
         const saveSelectedWorld = (world: World) => {
             localStorage.setItem(SELECTED_WORLD_KEY, JSON.stringify({
                 id: world.id,
@@ -292,7 +292,7 @@ export default defineComponent({
             }));
         };
         
-        // 从localStorage加载上次选择的世界
+        // 从localStorage加载上次选择的服务器
         const loadSelectedWorld = () => {
             const savedWorld = localStorage.getItem(SELECTED_WORLD_KEY);
             if (savedWorld && allWorlds.value.length > 0) {
@@ -309,7 +309,7 @@ export default defineComponent({
             }
         };
         
-        // 世界搜索
+        // 服务器搜索
         const searchWorlds = () => {
             if (!worldSearchText.value) {
                 worldResults.value = allWorlds.value;
@@ -326,14 +326,14 @@ export default defineComponent({
             }
         };
         
-        // 选择世界
+        // 选择服务器
         const selectWorld = (world: World) => {
             selectedWorld.value = world;
             showWorldDropdown.value = false;
             worldSearchText.value = world.name;
             worldError.value = false;
             
-            // 保存选择的世界
+            // 保存选择的服务器
             saveSelectedWorld(world);
         };
         
@@ -369,7 +369,7 @@ export default defineComponent({
             
             if (!selectedWorld.value) {
                 worldError.value = true;
-                ElMessage.warning('请先选择世界');
+                ElMessage.warning('请先选择服务器');
                 return;
             }
             
@@ -402,7 +402,7 @@ export default defineComponent({
             await store.dispatch('world/fetchWorlds');
             worldResults.value = allWorlds.value;
             
-            // 加载历史记录和上次选择的世界
+            // 加载历史记录和上次选择的服务器
             loadSearchHistory();
             loadSelectedWorld();
         });

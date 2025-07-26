@@ -21,14 +21,14 @@
                 <p class="description"> *满足价格阈值条件的物品，会在实时物价和物价推送中被标记为红色</p>
             </div>
             <div class="subscription-form">
-                <!-- 区服组列表 -->
+                <!-- 服务器组列表 -->
                 <div v-for="(group, groupIndex) in subscriptionGroups" :key="groupIndex" class="group">
                     <div class="input-row">
                         <div class="server-column">
-                            <input v-model="group.worldSearch" class="input-field" placeholder="请选择区服"
+                            <input v-model="group.worldSearch" class="input-field" placeholder="请选择服务器"
                                 @input="searchWorlds(groupIndex)" @focus="showWorldDropdown(groupIndex)"
                                 @blur="hideDropdown('world', groupIndex)">
-                            <!-- 区服下拉菜单 -->
+                            <!-- 服务器下拉菜单 -->
                             <div v-if="group.showWorldDropdown && group.worldResults.length" class="dropdown-menu">
                                 <div v-for="world in group.worldResults" :key="world.id" class="dropdown-item"
                                     @mousedown="selectWorld(groupIndex, world)">
@@ -452,7 +452,7 @@ export default defineComponent({
                 // 检查每个组是否都有至少一个物品
                 const invalidGroup = subscribeData.find(group => group.items.length === 0);
                 if (invalidGroup) {
-                    alert('每个区服至少需要订阅一个物品');
+                    alert('每个服务器至少需要订阅一个物品');
                     return;
                 }
 
